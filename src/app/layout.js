@@ -1,22 +1,22 @@
-import { Geist, Geist_Mono } from 'next/font/google'
-import './globals.css'
-import MainLayout from '@/components/layout/MainLayout'
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import MainLayout from '@/components/layout/MainLayout';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
-})
+});
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
-})
+});
 
 export const metadata = {
   title: 'Library Management System - DZUELS',
   description:
-    'Digital Zone United Evangelical Lutheran School Library Management System',
-}
+    'Dzuels-ILS is a web-based library management system designed to simplify the process of managing library resources and patrons.',
+};
 
 export default function RootLayout({ children }) {
   return (
@@ -25,5 +25,5 @@ export default function RootLayout({ children }) {
         <MainLayout>{children}</MainLayout>
       </body>
     </html>
-  )
+  );
 }

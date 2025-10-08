@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import Card from '@/components/ui/Card'
-import Button from '@/components/ui/button'
-import StatsCard from '@/components/ui/StatsCard'
-import Avatar from '@/components/ui/Avatar'
-import Badge from '@/components/ui/Badge'
-import styles from './dashboard.module.css'
+import Link from 'next/link';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/button';
+import StatsCard from '@/components/ui/StatsCard';
+import Avatar from '@/components/ui/Avatar';
+import Badge from '@/components/ui/Badge';
+import styles from './dashboard.module.css';
 
 export default function DashboardPage() {
   return (
@@ -14,8 +14,9 @@ export default function DashboardPage() {
       <div className={styles.dashboardHeader}>
         <h1 className={styles.dashboardTitle}>Library Management Dashboard</h1>
         <p className={styles.dashboardSubtitle}>
-          Welcome to the Digital Zone United Evangelical Lutheran School Library
-          Management System
+          Welcome to the Dzuels Library Management System! Dzuels-ILS is a
+          web-based library management system designed to simplify the process
+          of managing library resources and patrons.
         </p>
       </div>
 
@@ -149,5 +150,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
