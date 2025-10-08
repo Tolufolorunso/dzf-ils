@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import Card from '@/components/ui/Card'
-import Button from '@/components/ui/button'
-import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
-import Badge from '@/components/ui/Badge'
-import Alert from '@/components/ui/Alert'
-import Table from '@/components/ui/Table'
-import styles from './catalog.module.css'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/button';
+import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
+import Badge from '@/components/ui/Badge';
+import Alert from '@/components/ui/Alert';
+import Table from '@/components/ui/Table';
+import styles from './catalog.module.css';
 
 export default function CatalogPage() {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filters, setFilters] = useState({
     title: '',
     subtitle: '',
@@ -22,51 +22,52 @@ export default function CatalogPage() {
     classification: '',
     controlNumber: '',
     itemBarcode: '',
-  })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [totalItems, setTotalItems] = useState(0)
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
-    fetchItems()
-  }, [currentPage, filters])
+    fetchItems();
+  }, [currentPage, filters]);
 
   const fetchItems = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: '10',
         ...Object.fromEntries(
           Object.entries(filters).filter(([_, value]) => value.trim() !== '')
         ),
-      })
+      });
 
-      const response = await fetch(`/api/catalogs?${queryParams}`)
-      const data = await response.json()
+      const response = await fetch(`/api/catalogs?${queryParams}`);
+      const data = await response.json();
 
       if (data.status) {
-        setItems(data.data.items || [])
-        setTotalPages(data.data.totalPages || 1)
-        setTotalItems(data.data.totalItems || 0)
+        setItems(data.catalogs || []);
+        // setTotalPages(data.data.totalPages || 40);
+        setTotalPages(40);
+        setTotalItems(data.total || 0);
       } else {
-        setError(data.message || 'Failed to fetch catalog items')
+        setError(data.message || 'Failed to fetch catalog items');
       }
     } catch (err) {
-      setError('Network error. Please try again.')
-      console.error('Catalog fetch error:', err)
+      setError('Network error. Please try again.');
+      console.error('Catalog fetch error:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({
       ...prev,
       [field]: value,
-    }))
-    setCurrentPage(1) // Reset to first page when filtering
-  }
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
+  };
 
   const clearFilters = () => {
     setFilters({
@@ -76,19 +77,19 @@ export default function CatalogPage() {
       classification: '',
       controlNumber: '',
       itemBarcode: '',
-    })
-    setCurrentPage(1)
-  }
+    });
+    setCurrentPage(1);
+  };
 
   const getAvailabilityBadge = (item) => {
     if (item.isCheckedOut) {
-      return <Badge variant='warningBadge'>Checked Out</Badge>
+      return <Badge variant='warningBadge'>Checked Out</Badge>;
     }
     if (item.isOnHold) {
-      return <Badge variant='info'>On Hold</Badge>
+      return <Badge variant='info'>On Hold</Badge>;
     }
-    return <Badge variant='successBadge'>Available</Badge>
-  }
+    return <Badge variant='successBadge'>Available</Badge>;
+  };
 
   const getItemTypeBadge = (type) => {
     const typeColors = {
@@ -99,14 +100,14 @@ export default function CatalogPage() {
       cd: 'successBadge',
       dvd: 'secondary',
       ebook: 'primary',
-    }
-    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>
-  }
+    };
+    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>;
+  };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString()
-  }
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
 
   const tableHeaders = [
     'Title',
@@ -116,10 +117,10 @@ export default function CatalogPage() {
     'Barcode',
     'Availability',
     'Actions',
-  ]
+  ];
 
   const tableRows = items.map((item) => [
-    <div key='title'>
+    <div key={`title-${item.barcode}`}>
       <div className={styles.itemTitle}>{item.title}</div>
       {item.subtitle && (
         <div className={styles.itemSubtitle}>{item.subtitle}</div>
@@ -128,9 +129,11 @@ export default function CatalogPage() {
     item.author || 'N/A',
     item.classification || 'N/A',
     getItemTypeBadge(item.itemType),
-    <code className={styles.barcode}>{item.itemBarcode}</code>,
+    <code key={`barcode-${item.barcode}`} className={styles.barcode}>
+      {item.itemBarcode}
+    </code>,
     getAvailabilityBadge(item),
-    <div key='actions' className={styles.actionButtons}>
+    <div key={`actions-${item.barcode}`} className={styles.actionButtons}>
       <Link href={`/catalog/${item._id}`}>
         <Button variant='secondary' size='sm'>
           View
@@ -142,7 +145,7 @@ export default function CatalogPage() {
         </Button>
       </Link>
     </div>,
-  ])
+  ]);
 
   if (loading && items.length === 0) {
     return (
@@ -152,7 +155,7 @@ export default function CatalogPage() {
           <p>Loading catalog items...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -291,5 +294,5 @@ export default function CatalogPage() {
         </Card>
       )}
     </div>
-  )
+  );
 }

@@ -1,66 +1,66 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Card from '@/components/ui/Card'
-import Table from '@/components/ui/Table'
-import Alert from '@/components/ui/Alert'
-import Button from '@/components/ui/button'
-import Badge from '@/components/ui/Badge'
-import styles from '../circulation.module.css'
+import { useState, useEffect } from 'react';
+import Card from '@/components/ui/Card';
+import Table from '@/components/ui/Table';
+import Alert from '@/components/ui/Alert';
+import Button from '@/components/ui/button';
+import Badge from '@/components/ui/Badge';
+import styles from '../circulation.module.css';
 
 export default function HoldsPage() {
-  const [holds, setHolds] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(10)
+  const [holds, setHolds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
-    fetchHolds()
-  }, [])
+    fetchHolds();
+  }, []);
 
   const fetchHolds = async () => {
     try {
-      setLoading(true)
-      const response = await fetch('/api/circulations/holds')
-      const data = await response.json()
+      setLoading(true);
+      const response = await fetch('/api/circulations/holds');
+      const data = await response.json();
 
       if (data.status) {
-        setHolds(data.holds || [])
+        setHolds(data.holds || []);
       } else {
-        setError(data.message || 'Failed to fetch holds')
+        setError(data.message || 'Failed to fetch holds');
       }
     } catch (err) {
-      setError('Network error. Please try again.')
-      console.error('Holds fetch error:', err)
+      setError('Network error. Please try again.');
+      console.error('Holds fetch error:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString()
-  }
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
 
   const getStatusBadge = (returnedAt, dueDate) => {
     if (returnedAt) {
-      return <Badge variant='successBadge'>Returned</Badge>
+      return <Badge variant='successBadge'>Returned</Badge>;
     }
 
-    const today = new Date()
-    const due = new Date(dueDate)
-    const diffTime = due - today
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      return <Badge variant='errorBadge'>Overdue</Badge>
+      return <Badge variant='errorBadge'>Overdue</Badge>;
     } else if (diffDays <= 3) {
-      return <Badge variant='warningBadge'>Due Soon</Badge>
+      return <Badge variant='warningBadge'>Due Soon</Badge>;
     } else {
-      return <Badge variant='primary'>Active</Badge>
+      return <Badge variant='primary'>Active</Badge>;
     }
-  }
+  };
 
   const columns = [
     { key: 'itemBarcode', label: 'Item Barcode' },
@@ -70,23 +70,23 @@ export default function HoldsPage() {
     { key: 'borrowingDate', label: 'Borrowed Date' },
     { key: 'dueDate', label: 'Due Date' },
     { key: 'status', label: 'Status' },
-  ]
+  ];
 
   const tableData = holds.map((hold) => ({
     ...hold,
     borrowingDate: formatDate(hold.borrowingDate),
     dueDate: formatDate(hold.dueDate),
     status: getStatusBadge(hold.returnedAt, hold.dueDate),
-  }))
+  }));
 
-  const totalPages = Math.ceil(holds.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentHolds = tableData.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(holds.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentHolds = tableData.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
   return (
     <div className={styles.pageContainer}>
@@ -179,5 +179,5 @@ export default function HoldsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

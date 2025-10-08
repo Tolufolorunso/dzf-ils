@@ -1,52 +1,54 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import Link from 'next/link'
-import Card from '@/components/ui/Card'
-import Button from '@/components/ui/button'
-import Badge from '@/components/ui/Badge'
-import Avatar from '@/components/ui/Avatar'
-import Alert from '@/components/ui/Alert'
-import styles from '../patrons.module.css'
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/button';
+import Badge from '@/components/ui/Badge';
+import Avatar from '@/components/ui/Avatar';
+import Alert from '@/components/ui/Alert';
+import styles from '../patrons.module.css';
 
 export default function PatronDetailPage() {
-  const params = useParams()
-  const [patron, setPatron] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const params = useParams();
+  const [patron, setPatron] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     if (params.id) {
-      fetchPatron()
+      fetchPatron();
     }
-  }, [params.id])
+  }, [params.id]);
 
   const fetchPatron = async () => {
     try {
-      setLoading(true)
-      const response = await fetch(`/api/patrons/${params.id}`)
-      const data = await response.json()
+      setLoading(true);
+      const response = await fetch(`/api/patrons/${params.id}`);
+      const data = await response.json();
 
       if (data.status) {
-        setPatron(data.data)
+        setPatron(data.data);
       } else {
-        setError(data.message || 'Failed to fetch patron details')
+        setError(data.message || 'Failed to fetch patron details');
       }
     } catch (err) {
-      setError('Network error. Please try again.')
-      console.error('Patron fetch error:', err)
+      setError('Network error. Please try again.');
+      console.error('Patron fetch error:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getInitials = (patron) => {
-    if (!patron) return ''
-    const first = patron.firstname?.charAt(0) || ''
-    const last = patron.surname?.charAt(0) || ''
-    return (first + last).toUpperCase()
-  }
+    if (!patron) return '';
+    const first = patron.firstname?.charAt(0) || '';
+    const last = patron.surname?.charAt(0) || '';
+    return (first + last).toUpperCase();
+  };
 
   const getPatronTypeBadge = (type) => {
     const typeColors = {
@@ -54,14 +56,14 @@ export default function PatronDetailPage() {
       teacher: 'successBadge',
       staff: 'warningBadge',
       guest: 'default',
-    }
-    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>
-  }
+    };
+    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>;
+  };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString()
-  }
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
 
   if (loading) {
     return (
@@ -71,7 +73,7 @@ export default function PatronDetailPage() {
           <p>Loading patron details...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -84,7 +86,7 @@ export default function PatronDetailPage() {
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   if (!patron) {
@@ -97,7 +99,7 @@ export default function PatronDetailPage() {
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -120,9 +122,16 @@ export default function PatronDetailPage() {
             <div className={styles.avatarSection}>
               <Avatar size='lg'>
                 {patron.image_url ? (
-                  <img
-                    src={patron.image_url}
+                  // <img
+                  //   src={patron.image_url}
+                  //   alt={`${patron.firstname} ${patron.surname}`}
+                  //   className='avatar-img'
+                  // />
+                  <Image
+                    src={patron.image_url || '/default-avatar.png'}
                     alt={`${patron.firstname} ${patron.surname}`}
+                    width={60}
+                    height={60}
                     className='avatar-img'
                   />
                 ) : (
@@ -271,5 +280,5 @@ export default function PatronDetailPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

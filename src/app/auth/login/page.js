@@ -15,7 +15,7 @@ export default function LoginPage() {
 
         <div className={styles.authFooter}>
           <p>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <a href='/auth/register' className={styles.authLink}>
               Sign up
             </a>

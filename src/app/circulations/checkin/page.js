@@ -1,41 +1,41 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import Button from '@/components/ui/button'
-import Input from '@/components/ui/Input'
-import Card from '@/components/ui/Card'
-import Alert from '@/components/ui/Alert'
-import styles from '../circulation.module.css'
+import { useState } from 'react';
+import Button from '@/components/ui/button';
+import Input from '@/components/ui/Input';
+import Card from '@/components/ui/Card';
+import Alert from '@/components/ui/Alert';
+import styles from '../circulation.module.css';
 
 export default function CheckinPage() {
   const [formData, setFormData] = useState({
     patronBarcode: '',
     itemBarcode: '',
     point: 0,
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [checkinResult, setCheckinResult] = useState(null)
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [checkinResult, setCheckinResult] = useState(null);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
+    }));
     // Clear messages when user starts typing
-    if (error) setError('')
-    if (success) setSuccess('')
-    if (checkinResult) setCheckinResult(null)
-  }
+    if (error) setError('');
+    if (success) setSuccess('');
+    if (checkinResult) setCheckinResult(null);
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
-    setCheckinResult(null)
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    setCheckinResult(null);
 
     try {
       const response = await fetch('/api/circulations/check-in', {
@@ -47,13 +47,13 @@ export default function CheckinPage() {
           ...formData,
           point: Number(formData.point) || 0,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.status) {
-        setSuccess(data.message)
-        setCheckinResult(data.data)
+        setSuccess(data.message);
+        setCheckinResult(data.data);
 
         // Clear form after successful checkin
         setTimeout(() => {
@@ -61,31 +61,31 @@ export default function CheckinPage() {
             patronBarcode: '',
             itemBarcode: '',
             point: 0,
-          })
-          setSuccess('')
-          setCheckinResult(null)
-        }, 5000)
+          });
+          setSuccess('');
+          setCheckinResult(null);
+        }, 5000);
       } else {
-        setError(data.message)
+        setError(data.message);
       }
     } catch (err) {
-      setError('Network error. Please try again.')
-      console.error('Checkin error:', err)
+      setError('Network error. Please try again.');
+      console.error('Checkin error:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const resetForm = () => {
     setFormData({
       patronBarcode: '',
       itemBarcode: '',
       point: 0,
-    })
-    setError('')
-    setSuccess('')
-    setCheckinResult(null)
-  }
+    });
+    setError('');
+    setSuccess('');
+    setCheckinResult(null);
+  };
 
   return (
     <div className={styles.pageContainer}>
@@ -191,12 +191,12 @@ export default function CheckinPage() {
               <li>Verify the item is currently checked out</li>
               <li>Check patron information matches the checkout record</li>
               <li>Award points for reading programs or competitions</li>
-              <li>Points are added to patron's total score</li>
+              <li>Points are added to patron&apos;s total score</li>
               <li>Item will be marked as available for checkout</li>
             </ul>
           </div>
         </Card>
       </div>
     </div>
-  )
+  );
 }

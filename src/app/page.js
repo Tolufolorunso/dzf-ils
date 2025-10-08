@@ -1,26 +1,27 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import Button from '@/components/ui/button'
-import Card from '@/components/ui/Card'
-import styles from './page.module.css'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import Button from '@/components/ui/button';
+import Card from '@/components/ui/Card';
+import styles from './page.module.css';
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in by checking for auth token
     const checkAuthStatus = async () => {
       try {
-        const response = await fetch('/api/auth/me')
-        setIsLoggedIn(response.ok)
+        const response = await fetch('/api/auth/me');
+        setIsLoggedIn(response.ok);
       } catch (error) {
-        setIsLoggedIn(false)
+        setIsLoggedIn(false);
       }
-    }
-    checkAuthStatus()
-  }, [])
+    };
+    checkAuthStatus();
+  }, []);
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -138,5 +139,5 @@ export default function Home() {
         </div>
       </main>
     </div>
-  )
+  );
 }
