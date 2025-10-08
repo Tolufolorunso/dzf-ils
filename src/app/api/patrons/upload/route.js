@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { v2 as cloudinary } from 'cloudinary';
 import { dbConnect } from '@/lib/dbConnect';
 import PatronModel from '@/models/PatronModel';
+import { verifyAuth } from '@/lib/auth';
 
 // ☁️ Cloudinary configuration
 cloudinary.config({

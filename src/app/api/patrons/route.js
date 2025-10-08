@@ -232,6 +232,7 @@ export async function PATCH(req) {
       'parentEmail',
       'relationshipToPatron',
       'messagePreferences',
+      'currentClass',
     ];
 
     const filteredUpdates = Object.keys(updateFields)

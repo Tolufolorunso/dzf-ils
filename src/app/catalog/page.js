@@ -128,18 +128,18 @@ export default function CatalogPage() {
     </div>,
     item.author || 'N/A',
     item.classification || 'N/A',
-    getItemTypeBadge(item.itemType),
+    getItemTypeBadge(item.library || 'book'),
     <code key={`barcode-${item.barcode}`} className={styles.barcode}>
-      {item.itemBarcode}
+      {item.barcode}
     </code>,
     getAvailabilityBadge(item),
     <div key={`actions-${item.barcode}`} className={styles.actionButtons}>
-      <Link href={`/catalog/${item._id}`}>
+      <Link href={`/catalog/${item.controlNumber}`}>
         <Button variant='secondary' size='sm'>
           View
         </Button>
       </Link>
-      <Link href={`/catalog/${item._id}/edit`}>
+      <Link href={`/catalog/${item.controlNumber}/edit`}>
         <Button variant='primary' size='sm'>
           Edit
         </Button>

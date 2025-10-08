@@ -42,8 +42,6 @@ export default function PatronsPage() {
       const response = await fetch('/api/patrons');
       const data = await response.json();
 
-      
-
       if (data.status) {
         setPatrons(data.data || []);
       } else {
@@ -155,7 +153,7 @@ export default function PatronsPage() {
             View
           </Button>
         </Link>
-        <Link href={`/patrons/${patron._id}/edit`}>
+        <Link href={`/patrons/${patron.barcode}/edit`}>
           <Button variant='secondary' size='sm'>
             Edit
           </Button>

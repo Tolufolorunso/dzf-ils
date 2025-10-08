@@ -439,6 +439,12 @@
   font-size: 1.25rem;
 }
 
+.avatar.xl {
+  width: 120px;
+  height: 120px;
+  font-size: 2rem;
+}
+
 /* ================================
    END OF ALERT / BADGE / LOADER / AVATAR
 ================================ */
