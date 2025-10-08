@@ -1,0 +1,142 @@
+:root {
+  /* Brand Colors */
+  --brand-primary: #6f1111;
+  --brand-accent: #a32121;
+
+  /* Light Theme */
+  --background: #ffffff;
+  --foreground: #171717;
+  --surface: #f8f8f8;
+  --border-color: #e5e5e5;
+
+  /* Typography */
+  --font-body: 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --font-size-base: 16px;
+  --line-height-base: 1.6;
+
+  /* Transitions */
+  --transition-base: 0.25s ease-in-out;
+
+  /* Focus Ring */
+  --focus-ring: 0 0 0 3px rgba(111, 17, 17, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --surface: #1a1a1a;
+    --border-color: #2c2c2c;
+  }
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  font-size: var(--font-size-base);
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: var(--brand-primary);
+  text-decoration: none;
+  transition: color var(--transition-base);
+}
+
+a:hover,
+a:focus {
+  color: var(--brand-accent);
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--brand-primary);
+}
+
+/* Form Elements */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--surface);
+  color: var(--foreground);
+  transition: border-color var(--transition-base),
+    background var(--transition-base);
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1.5rem 0;
+}
+
+/* Scrollbar Styling (WebKit-based browsers) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--brand-primary);
+  border-radius: 10px;
+  border: 2px solid var(--surface);
+  transition: background var(--transition-base);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--brand-accent);
+}
+
+/* Dark mode scrollbar adjustments */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: var(--background);
+  }
+  ::-webkit-scrollbar-thumb {
+    border-color: var(--background);
+  }
+}
+
+/* Selection highlight */
+::selection {
+  background: rgba(111, 17, 17, 0.3);
+  color: var(--foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}

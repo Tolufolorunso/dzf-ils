@@ -1,0 +1,250 @@
+/* Dashboard Styles */
+.dashboardContainer {
+  min-height: 100vh;
+  background: var(--background);
+  padding: 2rem 1rem;
+}
+
+.dashboardHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dashboardTitle {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  margin-bottom: 0.5rem;
+}
+
+.dashboardSubtitle {
+  font-size: 1.1rem;
+  color: var(--foreground);
+  opacity: 0.8;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cardDescription {
+  color: var(--foreground);
+  opacity: 0.8;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.cardActions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+}
+
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 1rem;
+}
+
+.quickAction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid var(--border-color);
+  background: var(--surface);
+  text-decoration: none;
+  color: var(--foreground);
+  transition: all var(--transition-base);
+  text-align: center;
+}
+
+.quickAction:hover {
+  border-color: var(--brand-primary);
+  background: color-mix(in srgb, var(--surface) 95%, var(--brand-primary) 5%);
+  transform: translateY(-2px);
+}
+
+.quickActionIcon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.quickAction span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.infoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.infoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.infoItem:last-child {
+  border-bottom: none;
+}
+
+.infoItem strong {
+  color: var(--brand-primary);
+  font-weight: 600;
+}
+
+.statusOnline {
+  color: #1b5e20;
+  font-weight: 600;
+  background: #e6f4ea;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboardContainer {
+    padding: 1rem 0.5rem;
+  }
+
+  .dashboardTitle {
+    font-size: 2rem;
+  }
+
+  .dashboardSubtitle {
+    font-size: 1rem;
+  }
+
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardActions {
+    flex-direction: column;
+  }
+
+  .quickActions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .infoItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Statistics Section */
+.statsSection {
+  margin-bottom: 3rem;
+}
+
+.statsTitle {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: linear-gradient(135deg, var(--primary-600), var(--secondary-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Last Registered Patron */
+.lastRegisteredCard {
+  padding: 1rem 0;
+}
+
+.patronInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.patronDetails {
+  flex: 1;
+}
+
+.patronName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.patronBarcode {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-family: 'Courier New', monospace;
+  margin-bottom: 0.25rem;
+}
+
+.registrationDate {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .statusOnline {
+    background: #1b5e20;
+    color: #fff;
+  }
+}
+
+/* Responsive adjustments for stats */
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .statsTitle {
+    font-size: 1.5rem;
+  }
+
+  .patronInfo {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+}
