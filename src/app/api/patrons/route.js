@@ -153,6 +153,7 @@ export async function POST(request) {
   }
 }
 
+// ✅ Fetch all patrons
 export async function GET(req) {
   try {
     // const auth = await verifyAuth(req)
@@ -189,6 +190,7 @@ export async function GET(req) {
   }
 }
 
+// edit a patron
 export async function PATCH(req) {
   try {
     const auth = await verifyAuth(req);

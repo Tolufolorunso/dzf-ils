@@ -5,8 +5,6 @@ export async function GET(request) {
   try {
     const authResult = await verifyAuth(request);
 
-    console.log(authResult);
-
     if (!authResult.status) {
       return NextResponse.json(
         { status: false, message: 'Not authenticated' },

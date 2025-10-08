@@ -109,7 +109,7 @@ export default function PatronDetailPage() {
           <Link href='/patrons'>
             <Button variant='secondary'>← Back to Patrons</Button>
           </Link>
-          <Link href={`/patrons/${patron._id}/edit`}>
+          <Link href={`/patrons/${patron.barcode}/edit`}>
             <Button variant='primary'>Edit Patron</Button>
           </Link>
         </div>
@@ -120,24 +120,11 @@ export default function PatronDetailPage() {
         <Card title='Patron Profile'>
           <div className={styles.profileCard}>
             <div className={styles.avatarSection}>
-              <Avatar size='lg'>
-                {patron.image_url ? (
-                  // <img
-                  //   src={patron.image_url}
-                  //   alt={`${patron.firstname} ${patron.surname}`}
-                  //   className='avatar-img'
-                  // />
-                  <Image
-                    src={patron.image_url || '/default-avatar.png'}
-                    alt={`${patron.firstname} ${patron.surname}`}
-                    width={60}
-                    height={60}
-                    className='avatar-img'
-                  />
-                ) : (
-                  <div className='avatar-fallback'>{getInitials(patron)}</div>
-                )}
-              </Avatar>
+              <Avatar
+                size='lg'
+                src={patron.image_url.secure_url}
+                initial={getInitials(patron)}
+              />
               <div className={styles.patronBasicInfo}>
                 <h2 className={styles.patronName}>
                   {patron.surname}, {patron.firstname} {patron.middlename}

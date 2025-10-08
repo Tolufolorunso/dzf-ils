@@ -50,10 +50,11 @@ export default function Header() {
   };
 
   const getInitials = (user) => {
-    if (!user) return 'S';
-    const first = user.firstname?.charAt(0) || '';
-    const last = user.surname?.charAt(0) || '';
-    return (first + last).toUpperCase() || 'S';
+    if (!user) return 'DZ';
+    let [first, last] = user?.name.split(' ');
+    first = first?.charAt(0) || '';
+    last = last?.surname?.charAt(0) || '';
+    return (first + last).toUpperCase() || 'DZ';
   };
 
   return (
@@ -78,7 +79,7 @@ export default function Header() {
               </button>
               <div className={styles.dropdownContent}>
                 <Link href='/catalog' className={styles.dropdownLink}>
-                  List Catalogs
+                  Catalogs
                 </Link>
                 <Link href='/catalog/new' className={styles.dropdownLink}>
                   New Catalog
@@ -149,7 +150,7 @@ export default function Header() {
                     {user?.image_url ? (
                       <img
                         src={user?.image_url}
-                        alt={`${user?.firstname} ${user.surname}`}
+                        alt={`${user?.name}`}
                         className='avatar-img'
                       />
                     ) : (
@@ -157,9 +158,7 @@ export default function Header() {
                     )}
                   </Avatar>
                   <div className={styles.staffInfo}>
-                    <span className={styles.staffName}>
-                      {user?.firstname} {user?.surname}
-                    </span>
+                    <span className={styles.staffName}>{user?.name}</span>
                     <span className={styles.staffRole}>{user?.role}</span>
                   </div>
                   <span className={styles.dropdownArrow}>▼</span>
@@ -175,7 +174,7 @@ export default function Header() {
                         {user?.image_url ? (
                           <img
                             src={user?.image_url}
-                            alt={`${user?.firstname} ${user?.surname}`}
+                            alt={`${user?.name}`}
                             className='avatar-img'
                           />
                         ) : (
@@ -186,7 +185,7 @@ export default function Header() {
                       </Avatar>
                       <div className={styles.staffDropdownInfo}>
                         <div className={styles.staffDropdownName}>
-                          {user?.firstname} {user?.surname}
+                          {user?.name}
                         </div>
                         <div className={styles.staffDropdownRole}>
                           {user?.role}
@@ -194,13 +193,9 @@ export default function Header() {
                       </div>
                     </div>
                     <div className={styles.staffDropdownDivider}></div>
-                    <Link
-                      href='/staff/profile'
-                      className={styles.staffDropdownLink}
-                      onClick={() => setIsStaffDropdownOpen(false)}
-                    >
-                      Edit Profile
-                    </Link>
+                    <p className={styles.staffDropdownLink}>
+                      {getInitials(user)}
+                    </p>
                     <button
                       className={styles.staffDropdownLink}
                       onClick={handleLogout}

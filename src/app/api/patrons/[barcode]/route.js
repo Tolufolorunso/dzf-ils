@@ -5,60 +5,7 @@ import jwt from 'jsonwebtoken';
 import { dbConnect } from '@/lib/dbConnect';
 import PatronModel from '@/models/PatronModel';
 import UserModel from '@/models/UserModel';
-
-// 🔐 Auth helper
-async function verifyAuth(req) {
-  try {
-    await dbConnect();
-
-    // Check for cookie or Bearer token
-    const cookieToken = cookies().get('ils_token')?.value;
-
-    console.log(cookieToken);
-
-    const authHeader = req.headers.get('Authorization');
-    const bearerToken = authHeader?.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : null;
-
-    const token = cookieToken || bearerToken;
-    if (!token) {
-      return {
-        status: false,
-        message: 'Unauthorized: No token provided',
-        statusCode: StatusCodes.UNAUTHORIZED,
-      };
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await UserModel.findById(decoded._id).select('-password');
-
-    if (!user) {
-      return {
-        status: false,
-        message: 'User not found',
-        statusCode: StatusCodes.UNAUTHORIZED,
-      };
-    }
-
-    if (!['admin', 'asst_admin', 'librarian'].includes(user.role)) {
-      return {
-        status: false,
-        message: 'Forbidden: Insufficient permissions',
-        statusCode: StatusCodes.FORBIDDEN,
-      };
-    }
-
-    return { status: true, user };
-  } catch (error) {
-    console.error('Auth error:', error);
-    return {
-      status: false,
-      message: 'Invalid or expired token',
-      statusCode: StatusCodes.UNAUTHORIZED,
-    };
-  }
-}
+import { verifyAuth } from '@/lib/auth';
 
 // 🧾 GET one patron by barcode
 export async function GET(req, { params }) {
@@ -73,7 +20,7 @@ export async function GET(req, { params }) {
 
     await dbConnect();
 
-    const { barcode } = params;
+    const { barcode } = await params;
 
     if (!barcode) {
       return NextResponse.json(
@@ -83,7 +30,7 @@ export async function GET(req, { params }) {
     }
 
     const patron = await PatronModel.findOne({ barcode }).select('-__v');
-
+    console.log('patron', patron);
     if (!patron) {
       return NextResponse.json(
         { status: false, message: 'Patron not found' },
