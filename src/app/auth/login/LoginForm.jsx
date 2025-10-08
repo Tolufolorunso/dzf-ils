@@ -10,8 +10,8 @@ import styles from '../auth.module.css';
 export default function LoginForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    username: 'tolufolorunso',
-    password: '12345',
+    username: '',
+    password: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
