@@ -290,6 +290,7 @@ export default function CatalogPage() {
                 <Button variant='primary'>Add First Item</Button>
               </Link>
             )}
+            
           </div>
         </Card>
       )}
