@@ -277,7 +277,7 @@ export default function PatronsPage() {
                     {filteredPatrons.length} patrons
                   </span>
                 </div>
-                <Link href='/patrons/upload'>
+                <Link href='/patrons/new'>
                   <Button variant='primary'>Add New Patron</Button>
                 </Link>
               </div>

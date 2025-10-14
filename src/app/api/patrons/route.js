@@ -126,7 +126,7 @@ export async function POST(request) {
 
     // Step 7: Save to DB
     const newPatron = await Patron.create(patronData);
-    await delay(300);
+    // await delay(300);
 
     return NextResponse.json(
       {
