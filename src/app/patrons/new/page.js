@@ -282,8 +282,8 @@ export default function NewPatronPage() {
           `Patron created successfully! Barcode: ${data.data.barcode}`
         );
         setTimeout(() => {
-          router.push(`/patrons/${data.data.barcode}`);
-        }, 2000);
+          router.push(`/patrons/new`);
+        }, 10000);
       } else {
         setError(data.message || 'Failed to create patron');
       }
