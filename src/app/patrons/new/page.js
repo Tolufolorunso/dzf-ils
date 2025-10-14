@@ -11,6 +11,7 @@ import Alert from '@/components/ui/Alert';
 import styles from '../patrons.module.css';
 
 const schoolOptions = [
+  { value: '', label: 'Select School', address: '' },
   {
     label: 'Doherty Memorial Grammar School',
     value: 'Doherty Memorial Grammar School',
@@ -176,11 +177,13 @@ export default function NewPatronPage() {
         (school) => school.value === value // or school.label === value
       );
 
-      setFormData((prev) => ({
-        ...prev,
-        schoolAdress: value,
-        schoolAdress: selectedSchool ? selectedSchool.address : '',
-      }));
+      if (selectedSchool) {
+        setFormData((prev) => ({
+          ...prev,
+          [field]: value,
+          schoolAdress: selectedSchool.address,
+        }));
+      }
       return;
     }
 
