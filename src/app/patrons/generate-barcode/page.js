@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import JsBarcode from 'jsbarcode';
-import Card from '@/components/ui/Card';
+
 import Button from '@/components/ui/button';
 import Alert from '@/components/ui/Alert';
 import Input from '@/components/ui/Input';
@@ -23,10 +23,10 @@ const BarcodeCard = ({
   useEffect(() => {
     if (svgRef.current) {
       JsBarcode(svgRef.current, patronBarcode, {
-        format: 'CODE128',
+        format: 'ITF',
         displayValue: false,
         lineColor: '#000000',
-        width: 3,
+        width: 2,
         height: 60,
         margin: 0,
         background: 'transparent',
@@ -424,10 +424,10 @@ export default function GenerateBarcodePage() {
         );
         if (barcodeElement) {
           JsBarcode(barcodeElement, patron.barcode, {
-            format: 'CODE128',
+            format: 'ITF',
             displayValue: false,
             lineColor: '#000000',
-            width: 3,
+            width: 2,
             height: 60,
             margin: 0,
             background: 'transparent',
@@ -640,12 +640,6 @@ export default function GenerateBarcodePage() {
                 className={`${styles.patronCard} ${
                   selectedPatrons.includes(patron._id) ? styles.selected : ''
                 }`}
-                onClick={() =>
-                  handlePatronSelect(
-                    patron._id,
-                    !selectedPatrons.includes(patron._id)
-                  )
-                }
               >
                 <div className={styles.patronCardHeader}>
                   <Avatar
@@ -658,7 +652,6 @@ export default function GenerateBarcodePage() {
                       type='checkbox'
                       checked={selectedPatrons.includes(patron._id)}
                       onChange={(e) => {
-                        e.stopPropagation();
                         handlePatronSelect(patron._id, e.target.checked);
                       }}
                       className={styles.modernCheckbox}

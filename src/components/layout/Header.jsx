@@ -134,6 +134,12 @@ export default function Header() {
                 <Link href='/patrons/new' className={styles.dropdownLink}>
                   New Patron
                 </Link>
+                <Link
+                  href='/patrons/generate-barcode'
+                  className={styles.dropdownLink}
+                >
+                  Generate Barcode
+                </Link>
               </div>
             </div>
           </nav>
