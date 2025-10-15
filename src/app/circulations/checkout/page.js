@@ -6,7 +6,7 @@ import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 import Alert from '@/components/ui/Alert';
 import styles from '../circulation.module.css';
-import Image from 'next/image';
+
 import Avatar from '@/components/ui/Avatar';
 
 export default function CheckoutPage() {
