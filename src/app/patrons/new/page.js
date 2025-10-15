@@ -259,7 +259,9 @@ export default function NewPatronPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
 
     if (!validateStep(currentStep)) {
       return;
@@ -285,8 +287,49 @@ export default function NewPatronPage() {
           `Patron created successfully! Barcode: ${data.data.barcode}`
         );
         setTimeout(() => {
-          router.push(`/patrons/new`);
-        }, 10000);
+          // Reset form data
+          setFormData({
+            // Basic Information
+            firstname: '',
+            surname: '',
+            middlename: '',
+            email: '',
+            phoneNumber: '',
+            gender: '',
+            patronType: 'student',
+
+            // Address Information
+            street: '',
+            city: '',
+            state: '',
+            country: '',
+
+            // School Information (for students/staff/teachers)
+            schoolName: '',
+            otherSchool: '',
+            schoolAdress: '',
+            headOfSchool: '',
+            schoolEmail: '',
+            schoolPhoneNumber: '',
+            currentClass: '',
+
+            // Parent Information (for students)
+            parentName: '',
+            parentAddress: '',
+            parentPhoneNumber: '',
+            relationshipToPatron: '',
+            parentEmail: '',
+
+            // Employer Information (for staff/teachers)
+            employerName: '',
+
+            // Preferences
+            messagePreferences: ['email'],
+          });
+          setCurrentStep(1);
+          setSuccess('');
+          setErrors({});
+        }, 7000);
       } else {
         setError(data.message || 'Failed to create patron');
       }
@@ -707,40 +750,42 @@ export default function NewPatronPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        {renderStepContent()}
+      <form onSubmit={handleSubmit}>{renderStepContent()}</form>
 
-        {/* Navigation Buttons */}
-        <div className={styles.formActions}>
-          <div className={styles.stepNavigation}>
-            {currentStep > 1 && (
-              <Button
-                type='button'
-                variant='secondary'
-                onClick={prevStep}
-                disabled={saving}
-              >
-                ← Previous
-              </Button>
-            )}
+      {/* Navigation Buttons */}
+      <div className={styles.formActions}>
+        <div className={styles.stepNavigation}></div>
+        {currentStep > 1 && (
+          <Button
+            type='button'
+            variant='secondary'
+            onClick={prevStep}
+            disabled={saving}
+          >
+            ← Previous
+          </Button>
+        )}
 
-            {currentStep < getTotalSteps() ? (
-              <Button
-                type='button'
-                variant='primary'
-                onClick={nextStep}
-                disabled={saving}
-              >
-                Next →
-              </Button>
-            ) : (
-              <Button type='submit' variant='primary' disabled={saving}>
-                {saving ? 'Creating Patron...' : 'Create Patron'}
-              </Button>
-            )}
-          </div>
-        </div>
-      </form>
+        {currentStep < getTotalSteps() ? (
+          <Button
+            type='button'
+            variant='primary'
+            onClick={nextStep}
+            disabled={saving}
+          >
+            Next →
+          </Button>
+        ) : (
+          <Button
+            type='button'
+            variant='primary'
+            disabled={saving}
+            onClick={handleSubmit}
+          >
+            {saving ? 'Creating Patron...' : 'Create Patron'}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
