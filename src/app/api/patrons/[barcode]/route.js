@@ -30,7 +30,7 @@ export async function GET(req, { params }) {
     }
 
     const patron = await PatronModel.findOne({ barcode }).select('-__v');
-    console.log('patron', patron);
+
     if (!patron) {
       return NextResponse.json(
         { status: false, message: 'Patron not found' },

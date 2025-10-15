@@ -167,7 +167,7 @@ export async function GET(req) {
 
     // ✅ Fetch patrons excluding those marked as is18 = true
     const patrons = await Patron.find({ is18: { $ne: true } })
-      .select('surname barcode patronType points image_url')
+      .select('surname firstname barcode patronType points image_url gender')
       .lean();
 
     return NextResponse.json(

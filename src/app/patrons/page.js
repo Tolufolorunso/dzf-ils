@@ -18,7 +18,7 @@ export default function PatronsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(80);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -108,17 +108,29 @@ export default function PatronsPage() {
       staff: 'warningBadge',
       guest: 'default',
     };
-    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>;
+    return <Badge label={type} variant={typeColors[type]} />;
   };
 
   const getInitials = (patron) => {
     const first = patron.firstname?.charAt(0) || '';
     const last = patron.surname?.charAt(0) || '';
+
     return (first + last).toUpperCase();
   };
 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Returns the capitalized name of a patron
+   * @param {string} text The full name of the patron
+   * @return {string} The capitalized name of the patron
+   */
+  /*******  ccc198fb-efe4-4612-951f-8d2ab74329dd  *******/
+  const capitalize = (text) => {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+
   const columns = [
-    { key: 'avatar', label: '' },
+    { key: 'avatar', label: 'Avatar' },
     { key: 'name', label: 'Name' },
     { key: 'barcode', label: 'Barcode' },
     { key: 'patronType', label: 'Type' },
@@ -129,19 +141,15 @@ export default function PatronsPage() {
 
   const tableData = filteredPatrons.map((patron) => ({
     avatar: (
-      <Avatar size='md'>
-        {patron.image_url ? (
-          <img
-            src={patron.image_url}
-            alt={patron.name}
-            className='avatar-img'
-          />
-        ) : (
-          <div className='avatar-fallback'>{getInitials(patron)}</div>
-        )}
-      </Avatar>
+      <Avatar
+        size='md'
+        src={patron.image_url ? patron?.image_url?.secure_url : null}
+        initial={patron.image_url || getInitials(patron)}
+      />
     ),
-    name: `${patron.surname || ''}, ${patron.firstname || ''}`.trim(),
+    name: `${capitalize(patron.surname) || ''}, ${
+      capitalize(patron.firstname) || ''
+    }`.trim(),
     barcode: patron.barcode,
     patronType: getPatronTypeBadge(patron.patronType),
     gender: patron.gender || 'N/A',
