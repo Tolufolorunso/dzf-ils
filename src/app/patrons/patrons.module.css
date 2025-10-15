@@ -735,3 +735,439 @@
     background: var(--background);
   }
 }
+/* Barcode Generation Styles */
+.selectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.selectionInfo {
+  color: var(--brand-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.patronsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.patronItem {
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.patronItem:hover {
+  background: color-mix(in srgb, var(--surface) 90%, var(--brand-primary) 10%);
+  border-color: var(--brand-primary);
+}
+
+.patronCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.patronCheckbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-primary);
+  flex-shrink: 0;
+}
+
+.patronInfo {
+  flex: 1;
+}
+
+.patronName {
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 0.25rem;
+}
+
+.patronBarcode {
+  font-size: 0.9rem;
+  color: var(--foreground);
+  opacity: 0.7;
+}
+
+.generateActions {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 1rem;
+}
+
+/* Print View Styles */
+@media print {
+  .pageContainer {
+    padding: 0;
+    background: white;
+  }
+
+  .pageHeader {
+    display: none;
+  }
+
+  .grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 2mm !important;
+  }
+}
+
+/* Responsive Design for Barcode Generation */
+@media (max-width: 768px) {
+  .selectionHeader {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .patronCheckbox {
+    padding: 0.75rem;
+  }
+
+  .patronsList {
+    max-height: 300px;
+  }
+}
+/* Modern Barcode Generator Styles */
+.modernContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.searchSection {
+  background: var(--surface);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selectionPanel {
+  background: var(--surface);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selectionStats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  flex: 1;
+  background: linear-gradient(135deg, var(--brand-primary), #4f46e5);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.statNumber {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.statLabel {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.bulkActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.patronsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.patronCard {
+  background: var(--surface);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.patronCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: var(--brand-primary);
+}
+
+.patronCard.selected {
+  border-color: var(--brand-primary);
+  background: color-mix(in srgb, var(--surface) 95%, var(--brand-primary) 5%);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--brand-primary) 20%, transparent 80%);
+}
+
+.patronCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.checkboxContainer {
+  position: relative;
+}
+
+.modernCheckbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--brand-primary);
+  cursor: pointer;
+  transform: scale(1.2);
+}
+
+.patronCardBody {
+  text-align: center;
+}
+
+.patronCardName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 0.5rem;
+}
+
+.patronCardBarcode {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent 90%);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.patronCardMeta {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.patronType,
+.patronGender {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  background: var(--background);
+  color: var(--foreground);
+  opacity: 0.8;
+}
+
+/* Barcode Card Styles - Matching Your Image */
+.barcodeCard {
+  width: 320px;
+  height: 200px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  box-sizing: border-box;
+  font-family: 'Arial', sans-serif;
+  page-break-inside: avoid;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.cardHeader {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.foundationName {
+  font-size: 18px;
+  color: #6c757d;
+  font-weight: 400;
+  margin: 0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.barcodeContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  margin: 15px 0;
+}
+
+.barcodeSvg {
+  max-width: 280px;
+  height: auto;
+}
+
+.barcodeNumber {
+  font-size: 20px;
+  font-weight: bold;
+  color: #212529;
+  margin: 10px 0;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+}
+
+.patronNameContainer {
+  width: 100%;
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #dee2e6;
+}
+
+.nameLabel {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.patronNameText {
+  font-size: 16px;
+  color: #212529;
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+/* Print and Preview Styles */
+.previewContainer {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.barcodeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  justify-items: center;
+  padding: 1rem;
+}
+
+/* Individual Card Actions */
+.cardActions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 5px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.barcodeCard:hover .cardActions {
+  opacity: 1;
+}
+
+.cardActionBtn {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cardActionBtn:hover {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+/* Responsive Design for Modern UI */
+@media (max-width: 768px) {
+  .selectionStats {
+    flex-direction: column;
+  }
+
+  .bulkActions {
+    flex-direction: column;
+  }
+
+  .patronsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .barcodeGrid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .barcodeCard {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modernContainer {
+    gap: 1rem;
+  }
+
+  .searchSection,
+  .selectionPanel,
+  .previewContainer {
+    padding: 1rem;
+  }
+
+  .statCard {
+    padding: 1rem;
+  }
+
+  .statNumber {
+    font-size: 1.5rem;
+  }
+
+  .barcodeCard {
+    width: 280px;
+    height: 180px;
+    padding: 15px;
+  }
+
+  .foundationName {
+    font-size: 16px;
+  }
+
+  .barcodeNumber {
+    font-size: 18px;
+  }
+}
