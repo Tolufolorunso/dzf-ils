@@ -131,6 +131,11 @@ export async function POST(request) {
           title: catalog.title.mainTitle,
           itemBarcode: catalog.barcode,
           dueDate: dueDate.toDateString(),
+          patronName: `${patron.surname}, ${patron.firstname} ${
+            patron.middlename || ''
+          }`.trim(),
+          patronBarcode: patron.barcode,
+          patronImage: patron.image_url?.secure_url,
         },
       },
       { status: StatusCodes.OK }

@@ -1,11 +1,13 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import Button from '@/components/ui/button'
-import Input from '@/components/ui/Input'
-import Card from '@/components/ui/Card'
-import Alert from '@/components/ui/Alert'
-import styles from '../circulation.module.css'
+import { useState } from 'react';
+import Button from '@/components/ui/button';
+import Input from '@/components/ui/Input';
+import Card from '@/components/ui/Card';
+import Alert from '@/components/ui/Alert';
+import styles from '../circulation.module.css';
+import Image from 'next/image';
+import Avatar from '@/components/ui/Avatar';
 
 export default function CheckoutPage() {
   const [formData, setFormData] = useState({
@@ -13,30 +15,30 @@ export default function CheckoutPage() {
     itemBarcode: '',
     eventTitle: '',
     dueDay: 2,
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [checkoutResult, setCheckoutResult] = useState(null)
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [checkoutResult, setCheckoutResult] = useState(null);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
+    }));
     // Clear messages when user starts typing
-    if (error) setError('')
-    if (success) setSuccess('')
-    if (checkoutResult) setCheckoutResult(null)
-  }
+    if (error) setError('');
+    if (success) setSuccess('');
+    if (checkoutResult) setCheckoutResult(null);
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
-    setCheckoutResult(null)
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    setCheckoutResult(null);
 
     try {
       const response = await fetch('/api/circulations/check-out', {
@@ -45,13 +47,13 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.status) {
-        setSuccess(data.message)
-        setCheckoutResult(data.checkedOut)
+        setSuccess(data.message);
+        setCheckoutResult(data.checkedOut);
 
         // Clear form after successful checkout
         setTimeout(() => {
@@ -60,20 +62,20 @@ export default function CheckoutPage() {
             itemBarcode: '',
             eventTitle: '',
             dueDay: 2,
-          })
-          setSuccess('')
-          setCheckoutResult(null)
-        }, 5000)
+          });
+          setSuccess('');
+          // setCheckoutResult(null);
+        }, 5000);
       } else {
-        setError(data.message)
+        setError(data.message);
       }
     } catch (err) {
-      setError('Network error. Please try again.')
-      console.error('Checkout error:', err)
+      setError('Network error. Please try again.');
+      console.error('Checkout error:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -81,11 +83,11 @@ export default function CheckoutPage() {
       itemBarcode: '',
       eventTitle: '',
       dueDay: 2,
-    })
-    setError('')
-    setSuccess('')
-    setCheckoutResult(null)
-  }
+    });
+    setError('');
+    setSuccess('');
+    setCheckoutResult(null);
+  };
 
   return (
     <div className={styles.pageContainer}>
@@ -179,10 +181,28 @@ export default function CheckoutPage() {
         </Card>
 
         {checkoutResult && (
-          <Card title='Checkout Successful'>
+          <Card
+            title='Checkout Successful'
+            footer={
+              <Button onClick={() => setCheckoutResult(null)}>Clear</Button>
+            }
+          >
             <div className={styles.resultCard}>
               <div className={styles.resultItem}>
+                <Avatar
+                  src={checkoutResult.patronImage}
+                  alt='Item Image'
+                  size='lg'
+                />
+              </div>
+              <div className={styles.resultItem}>
                 <strong>Title:</strong> {checkoutResult.title}
+              </div>
+              <div className={styles.resultItem}>
+                <strong>Patron Name:</strong> {checkoutResult.patronName}
+              </div>
+              <div className={styles.resultItem}>
+                <strong>Patron ID:</strong> {checkoutResult.patronBarcode}
               </div>
               <div className={styles.resultItem}>
                 <strong>Item Barcode:</strong> {checkoutResult.itemBarcode}
@@ -207,5 +227,5 @@ export default function CheckoutPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
