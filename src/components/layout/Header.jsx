@@ -142,6 +142,19 @@ export default function Header() {
                 </Link>
               </div>
             </div>
+            <div className={styles.dropdown}>
+              <button className={styles.dropdownButton}>
+                Activities <span className={styles.dropdownArrow}>▼</span>
+              </button>
+              <div className={styles.dropdownContent}>
+                <Link href='/attendance' className={styles.dropdownLink}>
+                  Mark Attendance
+                </Link>
+                <Link href='/analytics' className={styles.dropdownLink}>
+                  Analytics & Leaderboard
+                </Link>
+              </div>
+            </div>
           </nav>
 
           <div className={styles.headerActions}>
