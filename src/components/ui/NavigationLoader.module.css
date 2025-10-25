@@ -1,0 +1,50 @@
+/* Navigation Loader Styles */
+.navigationLoader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.loaderBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand-primary), #4f46e5);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.loaderBar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .navigationLoader {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}

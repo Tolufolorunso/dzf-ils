@@ -29,18 +29,52 @@ export async function GET(request) {
     });
 
     // 2. Total Overdues (items with due date past current date)
-    const overdueItems = await Cataloging.find({
-      isCheckedOut: true,
-      'checkedOutHistory.dueDate': { $lt: currentDate },
-    });
+    // We need to check the latest checkout entry in the array
+    const overdueItems = await Cataloging.aggregate([
+      { $match: { isCheckedOut: true } },
+      {
+        $addFields: {
+          latestCheckout: { $arrayElemAt: ['$checkedOutHistory', -1] },
+        },
+      },
+      {
+        $match: {
+          'latestCheckout.dueDate': { $exists: true, $lt: currentDate },
+        },
+      },
+    ]);
     const totalOverdues = overdueItems.length;
 
     // 3. Overdue Over a Month (items overdue for more than 30 days)
-    const overdueOverMonth = await Cataloging.find({
-      isCheckedOut: true,
-      'checkedOutHistory.dueDate': { $lt: oneMonthAgo },
-    });
+    const overdueOverMonth = await Cataloging.aggregate([
+      { $match: { isCheckedOut: true } },
+      {
+        $addFields: {
+          latestCheckout: { $arrayElemAt: ['$checkedOutHistory', -1] },
+        },
+      },
+      {
+        $match: {
+          'latestCheckout.dueDate': { $exists: true, $lt: oneMonthAgo },
+        },
+      },
+    ]);
     const overdueOverMonthCount = overdueOverMonth.length;
+
+    // Debug info - let's see what we have in the database
+    const sampleCheckedOutItems = await Cataloging.find({ isCheckedOut: true })
+      .limit(3)
+      .select('title.mainTitle checkedOutHistory isCheckedOut');
+
+    console.log(
+      'Debug - Sample checked out items:',
+      JSON.stringify(sampleCheckedOutItems, null, 2)
+    );
+    console.log('Debug - Current date:', currentDate);
+    console.log('Debug - One month ago:', oneMonthAgo);
+    console.log('Debug - Total borrowed:', totalBorrowed);
+    console.log('Debug - Total overdues:', totalOverdues);
+    console.log('Debug - Overdue over month:', overdueOverMonthCount);
 
     // 4. Total Students (with gender breakdown)
     const studentStats = await Patron.aggregate([

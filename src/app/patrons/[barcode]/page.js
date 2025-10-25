@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button';
@@ -12,10 +12,16 @@ import styles from '../patrons.module.css';
 
 export default function PatronDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [patron, setPatron] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showCameraModal, setShowCameraModal] = useState(false);
@@ -27,8 +33,21 @@ export default function PatronDetailPage() {
   useEffect(() => {
     if (params.barcode) {
       fetchPatron();
+      fetchCurrentUser();
     }
   }, [params.barcode]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentUser(data.data.user);
+      }
+    } catch (error) {
+      console.error('Failed to fetch current user:', error);
+    }
+  };
 
   const fetchPatron = async () => {
     try {
@@ -255,6 +274,64 @@ export default function PatronDetailPage() {
     setCameraStream(null);
   };
 
+  const handleDeletePatron = async () => {
+    if (!patron || !currentUser) return;
+
+    // Verify admin role
+    if (currentUser.role !== 'admin') {
+      setError('Access denied. Only administrators can delete patrons.');
+      return;
+    }
+
+    // Verify confirmation text
+    const expectedText = `DELETE ${patron.barcode}`;
+    if (deleteConfirmText !== expectedText) {
+      setError(`Please type "${expectedText}" to confirm deletion.`);
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      setError('');
+
+      const response = await fetch(`/api/patrons/${patron.barcode}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.status) {
+        setSuccess('Patron deleted successfully. Redirecting...');
+        setTimeout(() => {
+          router.push('/patrons');
+        }, 2000);
+      } else {
+        setError(data.message || 'Failed to delete patron');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Delete patron error:', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteConfirm = () => {
+    if (!currentUser || currentUser.role !== 'admin') {
+      setError('Access denied. Only administrators can delete patrons.');
+      return;
+    }
+    setShowDeleteConfirm(true);
+    setDeleteConfirmText('');
+    setError('');
+  };
+
+  const closeDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    setDeleteConfirmText('');
+    setError('');
+  };
+
   if (loading) {
     return (
       <div className={styles.pageContainer}>
@@ -302,10 +379,22 @@ export default function PatronDetailPage() {
           <Link href={`/patrons/${patron.barcode}/edit`}>
             <Button variant='primary'>Edit Patron</Button>
           </Link>
+          {currentUser?.role === 'admin' && (
+            <Button
+              variant='danger'
+              onClick={openDeleteConfirm}
+              disabled={deleting}
+            >
+              🗑️ Delete Patron
+            </Button>
+          )}
         </div>
       </div>
 
-      {error && <Alert type='error' message={error} />}
+      {error && (
+        <Alert type='error' message={error} onClose={() => setError('')} />
+      )}
+      {success && <Alert type='success' message={success} />}
 
       <div className={styles.detailGrid}>
         {/* Enhanced Patron Avatar Card */}
@@ -558,6 +647,79 @@ export default function PatronDetailPage() {
                 disabled={uploading}
               >
                 {uploading ? 'Uploading...' : 'Upload Photo'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className={styles.cropperModal}>
+          <div className={styles.cropperContent}>
+            <h3 style={{ color: '#dc2626', marginBottom: '1rem' }}>
+              ⚠️ Delete Patron
+            </h3>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ marginBottom: '1rem', color: '#374151' }}>
+                <strong>WARNING:</strong> This action cannot be undone. The
+                patron will be permanently removed from the system.
+              </p>
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  marginBottom: '1rem',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
+                  <strong>Patron Details:</strong>
+                  <br />
+                  Name: {patron.firstname} {patron.surname}
+                  <br />
+                  Barcode: {patron.barcode}
+                  <br />
+                  Type: {patron.patronType}
+                </p>
+              </div>
+              <p style={{ marginBottom: '1rem', color: '#374151' }}>
+                To confirm deletion, please type:{' '}
+                <strong>DELETE {patron.barcode}</strong>
+              </p>
+              <input
+                type='text'
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={`Type "DELETE ${patron.barcode}" to confirm`}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.9rem',
+                  fontFamily: 'monospace',
+                }}
+                disabled={deleting}
+              />
+            </div>
+            <div className={styles.cropperActions}>
+              <Button
+                variant='secondary'
+                onClick={closeDeleteConfirm}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant='danger'
+                onClick={handleDeletePatron}
+                disabled={
+                  deleting || deleteConfirmText !== `DELETE ${patron.barcode}`
+                }
+              >
+                {deleting ? 'Deleting...' : 'Delete Patron'}
               </Button>
             </div>
           </div>
