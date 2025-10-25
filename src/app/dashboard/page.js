@@ -1,14 +1,42 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button';
 import StatsCard from '@/components/ui/StatsCard';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
+import Alert from '@/components/ui/Alert';
 import styles from './dashboard.module.css';
 
 export default function DashboardPage() {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/dashboard');
+      const data = await response.json();
+
+      if (data.status) {
+        setDashboardData(data.data);
+      } else {
+        setError(data.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error('Dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className={styles.dashboardContainer}>
       <div className={styles.dashboardHeader}>
@@ -18,52 +46,102 @@ export default function DashboardPage() {
           web-based library management system designed to simplify the process
           of managing library resources and patrons.
         </p>
+        {dashboardData && (
+          <div className={styles.refreshContainer}>
+            <Button
+              variant='secondary'
+              onClick={fetchDashboardData}
+              disabled={loading}
+            >
+              {loading ? 'Refreshing...' : '🔄 Refresh Data'}
+            </Button>
+          </div>
+        )}
       </div>
+
+      {error && (
+        <Alert type='error' message={error} onClose={() => setError('')} />
+      )}
 
       {/* Library Statistics */}
       <div className={styles.statsSection}>
         <h2 className={styles.statsTitle}>Library Statistics</h2>
-        <div className={styles.statsGrid}>
-          <StatsCard
-            title='Total Borrowed'
-            value='21'
-            icon='📚'
-            color='primary'
-          />
-          <StatsCard
-            title='Total Overdues'
-            value='21'
-            icon='⚠️'
-            color='warning'
-          />
-          <StatsCard
-            title='Overdue Over a Month'
-            value='21'
-            icon='🔴'
-            color='danger'
-          />
-          <StatsCard
-            title='Total Students'
-            value='532'
-            icon='👨‍🎓'
-            color='info'
-          />
-          <StatsCard
-            title='Total Staff'
-            value='9'
-            icon='👨‍💼'
-            color='secondary'
-          />
-          <StatsCard title='Total Guests' value='4' icon='👤' color='default' />
-          <StatsCard
-            title='Total Teachers'
-            value='29'
-            icon='👩‍🏫'
-            color='success'
-          />
-          <StatsCard title='Female' value='333' icon='👩' color='info' />
-          <StatsCard title='Male' value='199' icon='👨' color='primary' />
-        </div>
+        {loading ? (
+          <div className={styles.loadingContainer}>
+            <div className={styles.loader}></div>
+            <p>Loading dashboard statistics...</p>
+          </div>
+        ) : dashboardData ? (
+          <div className={styles.statsGrid}>
+            <StatsCard
+              title='Total Borrowed'
+              value={dashboardData.circulation.totalBorrowed.toString()}
+              icon='📚'
+              color='primary'
+            />
+            <StatsCard
+              title='Total Overdues'
+              value={dashboardData.circulation.totalOverdues.toString()}
+              icon='⚠️'
+              color='warning'
+            />
+            <StatsCard
+              title='Overdue Over a Month'
+              value={dashboardData.circulation.overdueOverMonth.toString()}
+              icon='🔴'
+              color='danger'
+            />
+            <StatsCard
+              title='Total Students'
+              value={dashboardData.patrons.totalStudents.total.toString()}
+              icon='👨‍🎓'
+              color='info'
+            />
+            <StatsCard
+              title='Total Staff'
+              value={dashboardData.patrons.totalStaff.toString()}
+              icon='👨‍💼'
+              color='secondary'
+            />
+            <StatsCard
+              title='Total Guests'
+              value={dashboardData.patrons.totalGuests.toString()}
+              icon='👤'
+              color='default'
+            />
+            <StatsCard
+              title='Total Teachers'
+              value={dashboardData.patrons.totalTeachers.toString()}
+              icon='👩‍🏫'
+              color='success'
+            />
+            <StatsCard
+              title='Female Students'
+              value={dashboardData.patrons.totalStudents.female.toString()}
+              icon='👩'
+              color='info'
+            />
+            <StatsCard
+              title='Male Students'
+              value={dashboardData.patrons.totalStudents.male.toString()}
+              icon='👨'
+              color='primary'
+            />
+            <StatsCard
+              title='Active Patrons'
+              value={dashboardData.patrons.activePatrons.toString()}
+              icon='✅'
+              color='success'
+            />
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <p>No data available</p>
+            <Button variant='primary' onClick={fetchDashboardData}>
+              Retry
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className={styles.dashboardGrid}>
