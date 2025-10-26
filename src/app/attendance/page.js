@@ -147,6 +147,22 @@ export default function AttendancePage() {
     { value: 'other', label: 'Other' },
   ];
 
+  const classNameOptions = [
+    { value: '', label: 'Select Class Level' },
+    {
+      value: 'Early Elementary (Primary 1-3)',
+      label: 'Early Elementary (Primary 1-3)',
+    },
+    {
+      value: 'Upper Elementary (Primary 4-6)',
+      label: 'Upper Elementary (Primary 4-6)',
+    },
+    { value: 'Junior Secondary School', label: 'Junior Secondary School' },
+    { value: 'Senior Secondary School', label: 'Senior Secondary School' },
+    { value: 'Mixed Age Group', label: 'Mixed Age Group' },
+    { value: 'Adult Literacy Program', label: 'Adult Literacy Program' },
+  ];
+
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
@@ -211,11 +227,11 @@ export default function AttendancePage() {
                 required
               />
 
-              <Input
+              <Select
                 label='Class Name *'
                 value={formData.className}
                 onChange={(e) => handleInputChange('className', e.target.value)}
-                placeholder='e.g., Morning Literacy Class'
+                options={classNameOptions}
                 required
               />
 

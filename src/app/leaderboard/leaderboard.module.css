@@ -1,0 +1,435 @@
+/* Public Leaderboard Page Styles */
+.pageContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+}
+
+.pageHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: white;
+}
+
+.pageTitle {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pageSubtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.contentContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Period Selection */
+.periodSelection {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Statistics Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 0.75rem;
+  border: 1px solid #dee2e6;
+  transition: transform 0.2s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+}
+
+.statIcon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statNumber {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #495057;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+}
+
+/* Podium Styles */
+.podium {
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  gap: 2rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  border-radius: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.podium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+  pointer-events: none;
+}
+
+.podiumPosition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.first {
+  order: 2;
+  transform: translateY(-20px);
+}
+
+.second {
+  order: 1;
+  transform: translateY(-10px);
+}
+
+.third {
+  order: 3;
+  transform: translateY(-5px);
+}
+
+.podiumRank {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.podiumName {
+  font-weight: 700;
+  color: #495057;
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.podiumScore {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #6f42c1;
+  margin-bottom: 0.5rem;
+}
+
+.championBadge {
+  background: linear-gradient(135deg, #dc3545, #fd7e14);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Leaderboard List */
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.leaderboardItem {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid #dee2e6;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboardItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.topThree {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-color: #ffc107;
+}
+
+.rankSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.rankNumber {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #495057;
+}
+
+.rankEmoji {
+  font-size: 1.5rem;
+}
+
+.patronSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.patronDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.patronName {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.25rem;
+  font-size: 1.1rem;
+}
+
+.patronBarcode {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.statsSection {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 60px;
+}
+
+.statValue {
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #495057;
+}
+
+.statLabel {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.125rem;
+}
+
+.scoreSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.totalScore {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #6f42c1;
+}
+
+.scoreLabel {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Points Guide */
+.pointsGuide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.pointsItem {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  border-radius: 0.75rem;
+  border: 1px solid #2196f3;
+}
+
+.pointsIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.pointsContent h4 {
+  color: #1976d2;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.pointsContent p {
+  color: #424242;
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+/* Loading and Empty States */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  background: white;
+  border-radius: 0.75rem;
+}
+
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e9ecef;
+  border-top-color: #6f42c1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  gap: 1rem;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+  opacity: 0.5;
+}
+
+.emptyState h3 {
+  color: #495057;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.emptyState p {
+  color: #6c757d;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 1rem 0.5rem;
+  }
+
+  .pageTitle {
+    font-size: 2.5rem;
+  }
+
+  .pageSubtitle {
+    font-size: 1.1rem;
+  }
+
+  .periodSelection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .podium {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .first,
+  .second,
+  .third {
+    order: unset;
+    transform: none;
+  }
+
+  .leaderboardItem {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .patronSection {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .statsSection {
+    justify-content: center;
+  }
+
+  .pointsGuide {
+    grid-template-columns: 1fr;
+  }
+
+  .pointsItem {
+    flex-direction: column;
+    text-align: center;
+  }
+}

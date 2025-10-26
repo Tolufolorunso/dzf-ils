@@ -7,17 +7,9 @@ import Patron from '@/models/PatronModel';
 import Cataloging from '@/models/CatalogingModel';
 import MonthlyActivity from '@/models/MonthlyActivityModel';
 
-// Submit book summary
+// Submit book summary (public - no authentication required)
 export async function POST(request) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.status) {
-      return NextResponse.json(
-        { status: false, message: auth.message },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
-      );
-    }
-
     await dbConnect();
 
     const body = await request.json();
@@ -60,6 +52,40 @@ export async function POST(request) {
       );
     }
 
+    // Check if patron has actually borrowed and returned this book
+    const hasCheckedOutBook = patron.itemsCheckedOutHistory.some(
+      (item) => item.itemBarcode === bookBarcode
+    );
+
+    if (!hasCheckedOutBook) {
+      return NextResponse.json(
+        {
+          status: false,
+          message:
+            'You can only submit summaries for books you have borrowed from the library.',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    // Check if the book is currently checked out (not returned yet)
+    if (book.isCheckedOut) {
+      const currentCheckout = book.patronsCheckedOutHistory?.find(
+        (checkout) => checkout.barcode === patronBarcode && !checkout.returnedAt
+      );
+
+      if (currentCheckout) {
+        return NextResponse.json(
+          {
+            status: false,
+            message:
+              'Please return the book first before submitting a summary.',
+          },
+          { status: StatusCodes.BAD_REQUEST }
+        );
+      }
+    }
+
     // Check if summary already exists for this book by this patron
     const existingSummary = await BookSummary.findOne({
       patronBarcode,
@@ -67,27 +93,59 @@ export async function POST(request) {
     });
 
     if (existingSummary) {
+      const statusMessage =
+        existingSummary.status === 'pending'
+          ? 'Your summary is currently being reviewed by staff.'
+          : existingSummary.status === 'approved'
+          ? `Your summary was approved and you earned ${existingSummary.points} points.`
+          : 'Your summary was reviewed by staff.';
+
       return NextResponse.json(
         {
           status: false,
-          message: 'You have already submitted a summary for this book.',
+          message: `You have already submitted a summary for "${book.title.mainTitle}". ${statusMessage} Each student can only submit one summary per book.`,
+          existingSummary: {
+            submissionDate: existingSummary.submissionDate,
+            status: existingSummary.status,
+            points: existingSummary.points,
+            rating: existingSummary.rating,
+          },
         },
         { status: StatusCodes.BAD_REQUEST }
       );
     }
 
     // Create book summary
-    const bookSummary = await BookSummary.create({
-      patronId: patron._id,
-      patronBarcode,
-      patronName: `${patron.firstname} ${patron.surname}`,
-      bookId: book._id,
-      bookTitle: book.title.mainTitle,
-      bookBarcode,
-      summary,
-      rating,
-      status: 'pending',
-    });
+    let bookSummary;
+    try {
+      bookSummary = await BookSummary.create({
+        patronId: patron._id,
+        patronBarcode,
+        patronName: `${patron.firstname} ${patron.surname}`,
+        bookId: book._id,
+        bookTitle: book.title.mainTitle,
+        bookBarcode,
+        summary,
+        rating,
+        status: 'pending',
+      });
+    } catch (dbError) {
+      // Handle duplicate key error (unique constraint violation)
+      if (
+        dbError.code === 11000 &&
+        dbError.keyPattern?.patronBarcode &&
+        dbError.keyPattern?.bookBarcode
+      ) {
+        return NextResponse.json(
+          {
+            status: false,
+            message: `You have already submitted a summary for "${book.title.mainTitle}". Each student can only submit one summary per book, regardless of how many times you borrow it.`,
+          },
+          { status: StatusCodes.BAD_REQUEST }
+        );
+      }
+      throw dbError; // Re-throw if it's a different error
+    }
 
     // Update monthly activity
     const now = new Date();

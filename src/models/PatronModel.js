@@ -143,7 +143,7 @@ const PatronSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export default mongoose.models.Patron || mongoose.model('Patron', PatronSchema);

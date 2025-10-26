@@ -5,17 +5,9 @@ import { verifyAuth } from '@/lib/auth';
 import MonthlyActivity from '@/models/MonthlyActivityModel';
 import Patron from '@/models/PatronModel';
 
-// Get monthly analytics and leaderboard
+// Get monthly analytics and leaderboard (public access)
 export async function GET(request) {
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.status) {
-      return NextResponse.json(
-        { status: false, message: auth.message },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
-      );
-    }
-
     await dbConnect();
 
     const { searchParams } = new URL(request.url);

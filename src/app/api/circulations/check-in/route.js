@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { dbConnect } from '@/lib/dbConnect';
 import Patron from '@/models/PatronModel';
 import Catalog from '@/models/CatalogingModel';
+import MonthlyActivity from '@/models/MonthlyActivityModel';
 import { delay } from '@/lib/utils';
 
 export async function POST(request) {
@@ -74,6 +75,28 @@ export async function POST(request) {
     });
 
     await patron.save();
+
+    // 📊 Update monthly activity for book return
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+
+    await MonthlyActivity.findOneAndUpdate(
+      { patronId: patron._id, year, month },
+      {
+        $inc: {
+          booksReturned: 1,
+          pointsFromBooks: Number(point) || 0,
+          totalPoints: Number(point) || 0,
+        },
+        $set: {
+          patronBarcode: patron.barcode,
+          patronName: `${patron.firstname} ${patron.surname}`,
+          isActive: true,
+        },
+      },
+      { upsert: true, new: true }
+    );
 
     return NextResponse.json(
       {

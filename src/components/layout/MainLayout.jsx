@@ -9,10 +9,15 @@ import styles from './layout.module.css';
 export default function MainLayout({ children }) {
   const pathname = usePathname();
 
-  // Don't show header/footer on auth pages
+  // Don't show header/footer on auth pages and student-only pages
   const isAuthPage = pathname?.startsWith('/auth');
+  const isStudentPage =
+    (pathname?.startsWith('/submit-summary') ||
+      pathname?.startsWith('/leaderboard') ||
+      pathname?.startsWith('/transcomm')) &&
+    !pathname?.startsWith('/transcomm/manage');
 
-  if (isAuthPage) {
+  if (isAuthPage || isStudentPage) {
     return (
       <>
         <NavigationLoader />

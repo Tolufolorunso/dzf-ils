@@ -1,0 +1,224 @@
+/* Public Submit Summary Page Styles */
+.pageContainer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+}
+
+.pageHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: white;
+}
+
+.pageTitle {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.pageSubtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.contentContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.summaryForm {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.instructionsCard {
+  background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  border: 2px solid #2196f3;
+  margin-bottom: 1rem;
+}
+
+.instructionsCard h3 {
+  color: #1976d2;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.instructionsCard ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #424242;
+}
+
+.instructionsCard li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.summarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.summaryLabel {
+  font-weight: 600;
+  color: var(--foreground);
+  font-size: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.characterCount {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: normal;
+}
+
+.summaryTextarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 200px;
+  background: white;
+  color: #333;
+  transition: border-color 0.3s ease;
+}
+
+.summaryTextarea:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.characterFeedback {
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.characterWarning {
+  color: #f57c00;
+}
+
+.characterSuccess {
+  color: #388e3c;
+}
+
+.formActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.benefitsSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.benefit {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 0.5rem;
+  border: 1px solid #dee2e6;
+}
+
+.benefitIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.benefitContent h4 {
+  color: #495057;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.benefitContent p {
+  color: #6c757d;
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 1rem 0.5rem;
+  }
+
+  .pageTitle {
+    font-size: 2.5rem;
+  }
+
+  .pageSubtitle {
+    font-size: 1.1rem;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formActions {
+    flex-direction: column;
+  }
+
+  .benefitsSection {
+    grid-template-columns: 1fr;
+  }
+
+  .benefit {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .summaryLabel {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Animation for success state */
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.characterSuccess {
+  animation: successPulse 0.5s ease-in-out;
+}

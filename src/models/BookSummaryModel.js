@@ -77,5 +77,8 @@ BookSummarySchema.index({ patronBarcode: 1, submissionDate: 1 });
 BookSummarySchema.index({ submissionDate: 1 });
 BookSummarySchema.index({ status: 1 });
 
+// Compound unique index to ensure one summary per patron per book
+BookSummarySchema.index({ patronBarcode: 1, bookBarcode: 1 }, { unique: true });
+
 export default mongoose.models.BookSummary ||
   mongoose.model('BookSummary', BookSummarySchema);

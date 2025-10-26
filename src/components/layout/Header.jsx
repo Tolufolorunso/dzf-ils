@@ -104,6 +104,18 @@ export default function Header() {
                   Check-in
                 </Link>
                 <Link
+                  href='/circulations/summaries'
+                  className={styles.dropdownLink}
+                >
+                  Book Summaries
+                </Link>
+                <Link
+                  href='/circulations/summaries/review'
+                  className={styles.dropdownLink}
+                >
+                  Review Summaries
+                </Link>
+                <Link
                   href='/circulations/holds'
                   className={styles.dropdownLink}
                 >
@@ -152,6 +164,9 @@ export default function Header() {
                 </Link>
                 <Link href='/analytics' className={styles.dropdownLink}>
                   Analytics & Leaderboard
+                </Link>
+                <Link href='/transcomm/manage' className={styles.dropdownLink}>
+                  Manage TRANSCOMM
                 </Link>
               </div>
             </div>

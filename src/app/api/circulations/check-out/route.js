@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { dbConnect } from '@/lib/dbConnect';
 import Patron from '@/models/PatronModel';
 import Catalog from '@/models/CatalogingModel';
+import MonthlyActivity from '@/models/MonthlyActivityModel';
 import { delay } from '@/lib/utils';
 import { verifyAuth } from '@/lib/auth';
 
@@ -57,16 +58,24 @@ export async function POST(request) {
     }
 
     // 🚫 Validate patron eligibility
-    if (patron.image_url && !patron.image_url.public_id) {
+    if (!patron.image_url || !patron.image_url.public_id) {
       return NextResponse.json(
-        { status: false, message: 'You must upload a passport photograph' },
+        {
+          status: false,
+          message:
+            'You must upload a passport photograph before borrowing books',
+        },
         { status: StatusCodes.FORBIDDEN }
       );
     }
 
     if (patron.hasBorrowedBook) {
       return NextResponse.json(
-        { status: false, message: 'Only one item can be borrowed at a time' },
+        {
+          status: false,
+          message:
+            'Only one item can be borrowed at a time. Please return your current book first.',
+        },
         { status: StatusCodes.CONFLICT }
       );
     }
@@ -121,6 +130,23 @@ export async function POST(request) {
 
     patron.hasBorrowedBook = true;
     await patron.save();
+
+    // 📊 Update monthly activity
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+
+    await MonthlyActivity.findOneAndUpdate(
+      { patronId: patron._id, year, month },
+      {
+        $inc: { booksCheckedOut: 1 },
+        $set: {
+          patronBarcode: patron.barcode,
+          patronName: `${patron.firstname} ${patron.surname}`,
+          isActive: true,
+        },
+      },
+      { upsert: true, new: true }
+    );
 
     // ✅ Return response
     return NextResponse.json(
