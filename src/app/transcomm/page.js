@@ -528,7 +528,7 @@ When you show respect, you earn respect in return!`,
                   <div className={styles.drnicerLetter}>I</div>
                   <div className={styles.drnicerContent}>
                     <h4>Integrity</h4>
-                    <p>Doing what's right, even when no one is watching</p>
+                    <p>Doing what&apos;s right, even when no one is watching</p>
                   </div>
                 </div>
                 <div className={styles.drnicerValue}>
@@ -595,9 +595,9 @@ When you show respect, you earn respect in return!`,
           <Card title='💭 Leadership Inspiration'>
             <div className={styles.quoteSection}>
               <blockquote className={styles.quote}>
-                "The greatest leader is not necessarily the one who does the
+                The greatest leader is not necessarily the one who does the
                 greatest things. They are the one that gets the people to do the
-                greatest things."
+                greatest things
               </blockquote>
               <cite className={styles.quoteAuthor}>- Ronald Reagan</cite>
             </div>
@@ -608,16 +608,16 @@ When you show respect, you earn respect in return!`,
             <div className={styles.callToAction}>
               <h3>Start Your Leadership Journey Today!</h3>
               <p>
-                Leadership isn't about waiting for permission - it's about
+                Leadership is not about waiting for permission - it is about
                 taking action. Here are some ways you can start leading right
                 now:
               </p>
               <ul className={styles.actionList}>
                 <li>🎯 Set a positive example in your classroom</li>
-                <li>🤝 Help a classmate who's struggling</li>
+                <li>🤝 Help a classmate who is struggling</li>
                 <li>🌱 Start a small project to improve your school</li>
                 <li>📚 Read more books to expand your knowledge</li>
-                <li>💬 Practice speaking up for what's right</li>
+                <li>💬 Practice speaking up for what is right</li>
                 <li>🌟 Encourage others to reach their potential</li>
               </ul>
               <p className={styles.encouragement}>

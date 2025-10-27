@@ -7,9 +7,12 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Alert from '@/components/ui/Alert';
 import Badge from '@/components/ui/Badge';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { AuthProvider } from '@/contexts/AuthContext';
+import apiClient from '@/lib/apiClient';
 import styles from './manage.module.css';
 
-export default function ManageTranscommPage() {
+function ManageTranscommPageContent() {
   const [formData, setFormData] = useState({
     title: '',
     category: 'leadership-basics',
@@ -61,14 +64,10 @@ export default function ManageTranscommPage() {
       setLoading(true);
       setError('');
 
-      const response = await fetch('/api/transcomm/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
+      const response = await apiClient.post(
+        '/api/transcomm/articles',
+        formData
+      );
       const data = await response.json();
 
       if (data.status) {
@@ -113,7 +112,7 @@ export default function ManageTranscommPage() {
     const fetchArticles = async () => {
       try {
         setArticlesLoading(true);
-        const response = await fetch('/api/transcomm/articles');
+        const response = await apiClient.get('/api/transcomm/articles');
         const data = await response.json();
 
         if (data.status) {
@@ -135,10 +134,9 @@ export default function ManageTranscommPage() {
     }
 
     try {
-      const response = await fetch(`/api/transcomm/articles/${articleId}`, {
-        method: 'DELETE',
-      });
-
+      const response = await apiClient.delete(
+        `/api/transcomm/articles/${articleId}`
+      );
       const data = await response.json();
 
       if (data.status) {
@@ -345,7 +343,7 @@ export default function ManageTranscommPage() {
             <h4>Content Guidelines:</h4>
             <ul>
               <li>Write for students under 18 years old</li>
-              <li>Use simple, clear language that's easy to understand</li>
+              <li>Use simple, clear language that is easy to understand</li>
               <li>Include practical examples and actionable advice</li>
               <li>Keep content positive and encouraging</li>
               <li>Use **text** for bold subheadings</li>
@@ -366,5 +364,15 @@ export default function ManageTranscommPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function ManageTranscommPage() {
+  return (
+    <AuthProvider>
+      <ProtectedRoute requiredRole='admin'>
+        <ManageTranscommPageContent />
+      </ProtectedRoute>
+    </AuthProvider>
   );
 }

@@ -72,6 +72,7 @@ export async function POST(req) {
       sameSite: 'strict',
       path: '/',
       maxAge: 60 * 60 * 24, // 1 day
+      maxAge: 50, // 1 day
     });
 
     // exclude password before sending user info

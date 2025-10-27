@@ -158,7 +158,8 @@ export default function PublicSubmitSummaryPage() {
                   <li>⭐ Rate the book honestly from 1-5 stars</li>
                   <li>👨‍🏫 Your summary will be reviewed by library staff</li>
                   <li>
-                    🏆 You'll earn bonus points once your summary is approved!
+                    🏆 You&apos;ll earn bonus points once your summary is
+                    approved!
                   </li>
                 </ul>
               </div>
