@@ -4,6 +4,7 @@ class ApiClient {
       process.env.NODE_ENV === 'production'
         ? process.env.NEXT_PUBLIC_API_URL || ''
         : '';
+    this.tokenExpiredHandler = null;
   }
 
   getHeaders() {
@@ -30,6 +31,13 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+
+      // Check if token expired (401 Unauthorized)
+      if (response.status === 401 && this.tokenExpiredHandler) {
+        this.tokenExpiredHandler();
+        return response;
+      }
+
       return response;
     } catch (error) {
       console.error('API request failed:', error);
@@ -73,6 +81,10 @@ class ApiClient {
       method: 'DELETE',
       ...options,
     });
+  }
+
+  setTokenExpiredHandler(handler) {
+    this.tokenExpiredHandler = handler;
   }
 }
 
