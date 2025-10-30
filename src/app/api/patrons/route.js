@@ -4,6 +4,7 @@ import { dbConnect } from '@/lib/dbConnect';
 import Patron from '@/models/PatronModel';
 import { verifyAuth } from '@/lib/auth';
 import { delay } from '@/lib/utils';
+import { hasPermission } from '@/lib/permissions';
 
 // Generate unique barcode
 function generateBarcode(count) {
@@ -156,18 +157,29 @@ export async function POST(request) {
 // ✅ Fetch all patrons
 export async function GET(req) {
   try {
-    // const auth = await verifyAuth(req)
+    const auth = await verifyAuth(req);
 
-    // if (!auth.status) {
-    //   return NextResponse.json(
-    //     { status: false, message: auth.message },
-    //     { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
-    //   )
-    // }
+    if (!auth.status) {
+      return NextResponse.json(
+        { status: false, message: auth.message },
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+      );
+    }
 
-    // ✅ Fetch patrons excluding those marked as is18 = true
-    const patrons = await Patron.find({ is18: { $ne: true } })
-      .select('surname firstname barcode patronType points image_url gender')
+    await dbConnect();
+
+    // Build query based on user role
+    let query = { is18: { $ne: true } };
+
+    // If user doesn't have permission to view all patrons, only fetch active ones
+    if (!hasPermission(auth.user.role, 'PATRON_VIEW_ALL')) {
+      query.active = true;
+    }
+
+    const patrons = await Patron.find(query)
+      .select(
+        'surname firstname barcode patronType points image_url gender active'
+      )
       .lean();
 
     return NextResponse.json(
@@ -226,13 +238,16 @@ export async function PATCH(req) {
       'state',
       'country',
       'schoolName',
+      'schoolAddress',
       'currentClass',
+      'schoolPhoneNumber',
       'parentName',
+      'parentAddress',
       'parentPhoneNumber',
       'parentEmail',
       'relationshipToPatron',
       'messagePreferences',
-      'currentClass',
+      'active',
     ];
 
     const filteredUpdates = Object.keys(updateFields)
@@ -249,9 +264,75 @@ export async function PATCH(req) {
       );
     }
 
+    // Build update object with nested fields
+    const updateObject = {};
+
+    // Handle address fields
+    if (
+      filteredUpdates.street ||
+      filteredUpdates.city ||
+      filteredUpdates.state ||
+      filteredUpdates.country
+    ) {
+      updateObject['address.street'] = filteredUpdates.street;
+      updateObject['address.city'] = filteredUpdates.city;
+      updateObject['address.state'] = filteredUpdates.state;
+      updateObject['address.country'] = filteredUpdates.country;
+    }
+
+    // Handle student school info fields
+    if (
+      filteredUpdates.schoolName ||
+      filteredUpdates.schoolAddress ||
+      filteredUpdates.currentClass ||
+      filteredUpdates.schoolPhoneNumber
+    ) {
+      updateObject['studentSchoolInfo.schoolName'] = filteredUpdates.schoolName;
+      updateObject['studentSchoolInfo.schoolAdress'] =
+        filteredUpdates.schoolAddress; // Note: keeping original typo for consistency
+      updateObject['studentSchoolInfo.currentClass'] =
+        filteredUpdates.currentClass;
+      updateObject['studentSchoolInfo.schoolPhoneNumber'] =
+        filteredUpdates.schoolPhoneNumber;
+    }
+
+    // Handle parent info fields
+    if (
+      filteredUpdates.parentName ||
+      filteredUpdates.parentAddress ||
+      filteredUpdates.parentPhoneNumber ||
+      filteredUpdates.parentEmail ||
+      filteredUpdates.relationshipToPatron
+    ) {
+      updateObject['parentInfo.parentName'] = filteredUpdates.parentName;
+      updateObject['parentInfo.parentAddress'] = filteredUpdates.parentAddress;
+      updateObject['parentInfo.parentPhoneNumber'] =
+        filteredUpdates.parentPhoneNumber;
+      updateObject['parentInfo.parentEmail'] = filteredUpdates.parentEmail;
+      updateObject['parentInfo.relationshipToPatron'] =
+        filteredUpdates.relationshipToPatron;
+    }
+
+    // Handle direct fields
+    const directFields = [
+      'firstname',
+      'surname',
+      'middlename',
+      'email',
+      'phoneNumber',
+      'gender',
+      'messagePreferences',
+      'active',
+    ];
+    directFields.forEach((field) => {
+      if (filteredUpdates[field] !== undefined) {
+        updateObject[field] = filteredUpdates[field];
+      }
+    });
+
     const updatedPatron = await Patron.findByIdAndUpdate(
       patronId,
-      { $set: filteredUpdates },
+      { $set: updateObject },
       { new: true, runValidators: true }
     ).select('-__v');
 

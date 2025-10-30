@@ -135,9 +135,18 @@ export default function PatronsPage() {
     { key: 'barcode', label: 'Barcode' },
     { key: 'patronType', label: 'Type' },
     { key: 'gender', label: 'Gender' },
+    { key: 'status', label: 'Status' },
     { key: 'points', label: 'Points' },
     { key: 'actions', label: 'Actions' },
   ];
+
+  const getStatusBadge = (active) => {
+    return active ? (
+      <Badge label='Active' variant='successBadge' />
+    ) : (
+      <Badge label='Inactive' variant='warningBadge' />
+    );
+  };
 
   const tableData = filteredPatrons.map((patron) => ({
     avatar: (
@@ -153,6 +162,7 @@ export default function PatronsPage() {
     barcode: patron.barcode,
     patronType: getPatronTypeBadge(patron.patronType),
     gender: patron.gender || 'N/A',
+    status: getStatusBadge(patron.active),
     points: patron.points || 0,
     actions: (
       <div className={styles.actionButtons}>

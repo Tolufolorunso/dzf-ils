@@ -30,8 +30,11 @@ export default function EditPatronPage() {
     state: '',
     country: '',
     schoolName: '',
+    schoolAddress: '',
     currentClass: '',
+    schoolPhoneNumber: '',
     parentName: '',
+    parentAddress: '',
     parentPhoneNumber: '',
     parentEmail: '',
     relationshipToPatron: '',
@@ -67,8 +70,12 @@ export default function EditPatronPage() {
           state: patronData.address?.state || '',
           country: patronData.address?.country || '',
           schoolName: patronData.studentSchoolInfo?.schoolName || '',
+          schoolAddress: patronData.studentSchoolInfo?.schoolAdress || '', // Note: keeping original typo
           currentClass: patronData.studentSchoolInfo?.currentClass || '',
+          schoolPhoneNumber:
+            patronData.studentSchoolInfo?.schoolPhoneNumber || '',
           parentName: patronData.parentInfo?.parentName || '',
+          parentAddress: patronData.parentInfo?.parentAddress || '',
           parentPhoneNumber: patronData.parentInfo?.parentPhoneNumber || '',
           parentEmail: patronData.parentInfo?.parentEmail || '',
           relationshipToPatron:
@@ -257,10 +264,24 @@ export default function EditPatronPage() {
                 }
               />
               <Input
+                label='School Address'
+                value={formData.schoolAddress}
+                onChange={(e) =>
+                  handleInputChange('schoolAddress', e.target.value)
+                }
+              />
+              <Input
                 label='Current Class'
                 value={formData.currentClass}
                 onChange={(e) =>
                   handleInputChange('currentClass', e.target.value)
+                }
+              />
+              <Input
+                label='School Phone Number'
+                value={formData.schoolPhoneNumber}
+                onChange={(e) =>
+                  handleInputChange('schoolPhoneNumber', e.target.value)
                 }
               />
             </div>
@@ -276,6 +297,13 @@ export default function EditPatronPage() {
                 value={formData.parentName}
                 onChange={(e) =>
                   handleInputChange('parentName', e.target.value)
+                }
+              />
+              <Input
+                label='Parent Address'
+                value={formData.parentAddress}
+                onChange={(e) =>
+                  handleInputChange('parentAddress', e.target.value)
                 }
               />
               <Input

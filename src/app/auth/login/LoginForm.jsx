@@ -87,6 +87,13 @@ export default function LoginForm() {
         required
         autoComplete='current-password'
       />
+      {/* <Input
+        label='Remember Me'
+        name='rememberMe'
+        type='checkbox'
+        value={true}
+        onChange={handleInputChange}
+      /> */}
 
       <Button
         type='submit'

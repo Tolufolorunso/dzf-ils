@@ -46,8 +46,21 @@ export async function POST(request) {
     });
     if (!patron) {
       return NextResponse.json(
-        { status: false, message: 'Patron not found or inactive.' },
+        { status: false, message: 'Patron not found.' },
         { status: StatusCodes.NOT_FOUND }
+      );
+    }
+
+    // Check if patron is active
+    if (!patron.active) {
+      return NextResponse.json(
+        {
+          status: false,
+          message:
+            'Patron is inactive. Please contact the ICT department to reactivate your account before marking attendance.',
+          code: 'PATRON_INACTIVE',
+        },
+        { status: StatusCodes.FORBIDDEN }
       );
     }
 

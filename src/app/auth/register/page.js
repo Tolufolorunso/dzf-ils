@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import Button from '@/components/ui/button'
-import Input from '@/components/ui/Input'
-import Card from '@/components/ui/Card'
-import Alert from '@/components/ui/Alert'
-import Select from '@/components/ui/Select'
-import styles from '../auth.module.css'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Button from '@/components/ui/button';
+import Input from '@/components/ui/Input';
+import Card from '@/components/ui/Card';
+import Alert from '@/components/ui/Alert';
+import Select from '@/components/ui/Select';
+import styles from '../auth.module.css';
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const router = useRouter();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
     confirmPassword: '',
     name: '',
     role: 'librarian',
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const roleOptions = [
     { value: 'librarian', label: 'Librarian' },
@@ -29,39 +29,39 @@ export default function RegisterPage() {
     { value: 'ima', label: 'IMA' },
     { value: 'ict', label: 'ICT' },
     { value: 'facility', label: 'Facility' },
-  ]
+  ];
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
+    }));
     // Clear error when user starts typing
-    if (error) setError('')
-  }
+    if (error) setError('');
+  };
 
   const validateForm = () => {
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return false
+      setError('Passwords do not match');
+      return false;
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
-      return false
+    if (formData.password.length < 5) {
+      setError('Password must be at least 5 characters long');
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
 
     if (!validateForm()) {
-      setLoading(false)
-      return
+      setLoading(false);
+      return;
     }
 
     try {
@@ -76,26 +76,26 @@ export default function RegisterPage() {
           name: formData.name,
           role: formData.role,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.status) {
-        setSuccess(data.message)
+        setSuccess(data.message);
         // Redirect to login page after successful registration
         setTimeout(() => {
-          router.push('/auth/login')
-        }, 1500)
+          router.push('/auth/login');
+        }, 1500);
       } else {
-        setError(data.message)
+        setError(data.message);
       }
     } catch (err) {
-      setError('Network error. Please try again.')
-      console.error('Registration error:', err)
+      setError('Network error. Please try again.');
+      console.error('Registration error:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className={styles.authContainer}>
@@ -199,5 +199,5 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

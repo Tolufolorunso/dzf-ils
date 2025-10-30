@@ -45,10 +45,10 @@ export async function GET(request) {
     // Get top performers
     const topPerformers = monthlyActivities.slice(0, 10);
 
-    // Get inactive patrons (no activity this month) - excluding teachers, staff, and guests
+    // Get inactive patrons (no activity this month) - excluding teachers, staff, and guests, and only active patrons
     const allPatrons = await Patron.find({
       is18: { $ne: true },
-      // active: true,
+      active: true,
       patronType: { $nin: ['teacher', 'staff', 'guest'] },
     }).select('firstname surname barcode patronType');
 

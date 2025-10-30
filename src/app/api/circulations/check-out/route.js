@@ -50,6 +50,19 @@ export async function POST(request) {
       );
     }
 
+    // Check if patron is active
+    if (!patron.active) {
+      return NextResponse.json(
+        {
+          status: false,
+          message:
+            'Patron is inactive. Please contact the ICT department to reactivate your account before borrowing books.',
+          code: 'PATRON_INACTIVE',
+        },
+        { status: StatusCodes.FORBIDDEN }
+      );
+    }
+
     if (!catalog) {
       return NextResponse.json(
         { status: false, message: 'Item not found' },

@@ -26,6 +26,8 @@ export default function PatronDetailPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraStream, setCameraStream] = useState(null);
+  const [activating, setActivating] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -82,7 +84,7 @@ export default function PatronDetailPage() {
       staff: 'warningBadge',
       guest: 'default',
     };
-    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>;
+    return <Badge variant={typeColors[type] || 'default'} label={type} />;
   };
 
   const formatDate = (dateString) => {
@@ -332,6 +334,64 @@ export default function PatronDetailPage() {
     setError('');
   };
 
+  const handlePatronStatusChange = async (action) => {
+    if (!patron || !currentUser) return;
+
+    // Check permissions for the action
+    const canDeactivate = ['admin', 'asst_admin', 'ict'].includes(
+      currentUser.role
+    );
+    const canActivate = ['admin', 'asst_admin', 'ict', 'librarian'].includes(
+      currentUser.role
+    );
+
+    if (action === 'deactivate' && !canDeactivate) {
+      setError(
+        "Access denied. You don't have permission to deactivate patrons."
+      );
+      return;
+    }
+
+    if (action === 'activate' && !canActivate) {
+      setError(
+        "Access denied. You don't have permission to reactivate patrons."
+      );
+      return;
+    }
+
+    try {
+      if (action === 'activate') {
+        setActivating(true);
+      } else {
+        setDeactivating(true);
+      }
+      setError('');
+
+      const response = await fetch(`/api/patrons/${patron.barcode}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      const data = await response.json();
+
+      if (data.status) {
+        setPatron((prev) => ({ ...prev, active: data.data.active }));
+        setSuccess(`Patron ${action}d successfully.`);
+      } else {
+        setError(data.message || `Failed to ${action} patron`);
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+      console.error(`${action} patron error:`, err);
+    } finally {
+      setActivating(false);
+      setDeactivating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.pageContainer}>
@@ -379,6 +439,25 @@ export default function PatronDetailPage() {
           <Link href={`/patrons/${patron.barcode}/edit`}>
             <Button variant='primary'>Edit Patron</Button>
           </Link>
+          {patron.active ? (
+            ['admin', 'asst_admin', 'ict'].includes(currentUser?.role) && (
+              <Button
+                variant='warning'
+                onClick={() => handlePatronStatusChange('deactivate')}
+                disabled={deactivating}
+              >
+                {deactivating ? 'Deactivating...' : '⏸️ Deactivate'}
+              </Button>
+            )
+          ) : (
+            <Button
+              variant='success'
+              onClick={() => handlePatronStatusChange('activate')}
+              disabled={activating}
+            >
+              {activating ? 'Activating...' : '▶️ Reactivate'}
+            </Button>
+          )}
           {currentUser?.role === 'admin' && (
             <Button
               variant='danger'
@@ -455,8 +534,15 @@ export default function PatronDetailPage() {
             </h2>
             <div className={styles.patronBadges}>
               {getPatronTypeBadge(patron.patronType)}
+
               {patron.gender && (
-                <Badge variant='default'>{patron.gender}</Badge>
+                <Badge variant='default' label={patron.gender} />
+              )}
+
+              {patron.active ? (
+                <Badge variant='successBadge' label='Active' />
+              ) : (
+                <Badge variant='warningBadge' label='Inactive' />
               )}
             </div>
             <div className={styles.patronBarcode}>
