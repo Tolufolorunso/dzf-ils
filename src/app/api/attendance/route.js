@@ -25,9 +25,10 @@ export async function POST(request) {
       classType = 'literacy',
       className,
       classDate,
-      points = 5,
       notes = '',
     } = body;
+
+    const points = 20; // Fixed 20 points for attendance
 
     if (!patronBarcode || !className || !classDate) {
       return NextResponse.json(

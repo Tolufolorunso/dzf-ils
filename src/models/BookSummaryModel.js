@@ -33,6 +33,7 @@ const BookSummarySchema = new mongoose.Schema(
     summary: {
       type: String,
       required: true,
+      default: `This book summary record was created by library staff to acknowledge the patron's reading activity and award points for their engagement with library materials. The patron has successfully completed reading this book and demonstrated their commitment to literacy and learning.`,
       minlength: 100, // Minimum 100 characters for a proper summary
     },
     rating: {
@@ -77,8 +78,8 @@ BookSummarySchema.index({ patronBarcode: 1, submissionDate: 1 });
 BookSummarySchema.index({ submissionDate: 1 });
 BookSummarySchema.index({ status: 1 });
 
-// Compound unique index to ensure one summary per patron per book
-BookSummarySchema.index({ patronBarcode: 1, bookBarcode: 1 }, { unique: true });
+// Unique index to ensure only one summary per book
+BookSummarySchema.index({ bookBarcode: 1 }, { unique: true });
 
 export default mongoose.models.BookSummary ||
   mongoose.model('BookSummary', BookSummarySchema);

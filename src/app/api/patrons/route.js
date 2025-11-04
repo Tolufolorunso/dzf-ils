@@ -265,7 +265,9 @@ export async function PATCH(req) {
     }
 
     // Build update object with nested fields
-    const updateObject = {};
+    const updateObject = {
+      active: true,
+    };
 
     // Handle address fields
     if (

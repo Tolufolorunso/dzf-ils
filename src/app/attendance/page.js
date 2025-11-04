@@ -23,7 +23,6 @@ export default function AttendancePage() {
     classType: 'literacy',
     className: '',
     classDate: new Date().toISOString().split('T')[0],
-    points: 5,
     notes: '',
   });
 
@@ -90,7 +89,7 @@ export default function AttendancePage() {
 
       if (data.status) {
         setSuccess(
-          `Attendance marked for ${data.data.patronName}. Points awarded: ${data.data.points}`
+          `Attendance marked for ${data.data.patronName}. Points awarded: 20`
         );
 
         // Reset form
@@ -241,17 +240,6 @@ export default function AttendancePage() {
                 value={formData.classDate}
                 onChange={(e) => handleInputChange('classDate', e.target.value)}
                 required
-              />
-
-              <Input
-                label='Points to Award'
-                type='number'
-                value={formData.points}
-                onChange={(e) =>
-                  handleInputChange('points', parseInt(e.target.value) || 0)
-                }
-                min='0'
-                max='50'
               />
 
               <Input

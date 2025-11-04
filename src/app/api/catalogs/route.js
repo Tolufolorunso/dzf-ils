@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes';
 import { revalidatePath } from 'next/cache';
 import { dbConnect } from '@/lib/dbConnect';
 import Catalog from '@/models/CatalogingModel';
-import { redirect } from 'next/navigation';
 
 export async function POST(request) {
   try {
@@ -136,23 +135,85 @@ export async function POST(request) {
   }
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
     await dbConnect();
 
-    // 🧠 Retrieve only useful fields for lightweight response
-    const catalogs = await Catalog.find({})
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 20;
+    const skip = (page - 1) * limit;
+
+    // Build filter query
+    const filterQuery = {};
+
+    // Filter by title
+    if (searchParams.get('title')) {
+      filterQuery['title.mainTitle'] = {
+        $regex: searchParams.get('title'),
+        $options: 'i',
+      };
+    }
+
+    // Filter by subtitle
+    if (searchParams.get('subtitle')) {
+      filterQuery['title.subtitle'] = {
+        $regex: searchParams.get('subtitle'),
+        $options: 'i',
+      };
+    }
+
+    // Filter by author
+    if (searchParams.get('author')) {
+      filterQuery['author.mainAuthor'] = {
+        $regex: searchParams.get('author'),
+        $options: 'i',
+      };
+    }
+
+    // Filter by classification
+    if (searchParams.get('classification')) {
+      filterQuery.classification = {
+        $regex: searchParams.get('classification'),
+        $options: 'i',
+      };
+    }
+
+    // Filter by control number
+    if (searchParams.get('controlNumber')) {
+      filterQuery.controlNumber = {
+        $regex: searchParams.get('controlNumber'),
+        $options: 'i',
+      };
+    }
+
+    // Filter by barcode
+    if (searchParams.get('itemBarcode')) {
+      filterQuery.barcode = {
+        $regex: searchParams.get('itemBarcode'),
+        $options: 'i',
+      };
+    }
+
+    // Get total count for pagination
+    const totalCount = await Catalog.countDocuments(filterQuery);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // 🧠 Retrieve filtered and paginated results
+    const catalogs = await Catalog.find(filterQuery)
       .select(
         'barcode author title classification controlNumber isCheckedOut library createdAt updatedAt'
       )
-      .sort({ createdAt: -1 }); // newest first
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     // 📦 Format data for frontend
     const formatted = catalogs.map((item) => ({
       barcode: item.barcode,
-      title: item.title.mainTitle,
-      subtitle: item.title.subtitle || '',
-      author: item.author.mainAuthor,
+      title: item.title?.mainTitle || 'N/A',
+      subtitle: item.title?.subtitle || '',
+      author: item.author?.mainAuthor || 'N/A',
       classification: item.classification,
       controlNumber: item.controlNumber,
       isCheckedOut: item.isCheckedOut,
@@ -165,7 +226,9 @@ export async function GET() {
       {
         status: true,
         message: 'Catalog items fetched successfully',
-        total: formatted.length,
+        total: totalCount,
+        totalPages,
+        currentPage: page,
         catalogs: formatted,
       },
       { status: StatusCodes.OK }

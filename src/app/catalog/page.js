@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/Input';
-import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
 import Alert from '@/components/ui/Alert';
 import Table from '@/components/ui/Table';
@@ -28,7 +27,11 @@ export default function CatalogPage() {
   const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
-    fetchItems();
+    const timeoutId = setTimeout(() => {
+      fetchItems();
+    }, 300); // Debounce the API calls
+
+    return () => clearTimeout(timeoutId);
   }, [currentPage, filters]);
 
   const fetchItems = async () => {
@@ -36,7 +39,7 @@ export default function CatalogPage() {
       setLoading(true);
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10',
+        limit: '20',
         ...Object.fromEntries(
           Object.entries(filters).filter(([_, value]) => value.trim() !== '')
         ),
@@ -47,8 +50,7 @@ export default function CatalogPage() {
 
       if (data.status) {
         setItems(data.catalogs || []);
-        // setTotalPages(data.data.totalPages || 40);
-        setTotalPages(40);
+        setTotalPages(data.totalPages || 1);
         setTotalItems(data.total || 0);
       } else {
         setError(data.message || 'Failed to fetch catalog items');
@@ -83,12 +85,12 @@ export default function CatalogPage() {
 
   const getAvailabilityBadge = (item) => {
     if (item.isCheckedOut) {
-      return <Badge variant='warningBadge'>Checked Out</Badge>;
+      return <Badge variant='warningBadge' label='Checked Out' />;
     }
     if (item.isOnHold) {
-      return <Badge variant='info'>On Hold</Badge>;
+      return <Badge variant='info' label='On Hold' />;
     }
-    return <Badge variant='successBadge'>Available</Badge>;
+    return <Badge variant='successBadge' label='Available' />;
   };
 
   const getItemTypeBadge = (type) => {
@@ -101,51 +103,52 @@ export default function CatalogPage() {
       dvd: 'secondary',
       ebook: 'primary',
     };
-    return <Badge variant={typeColors[type] || 'default'}>{type}</Badge>;
+    return <Badge variant={typeColors[type] || 'default'} label={type} />;
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const tableHeaders = [
-    'Title',
-    'Author',
-    'Classification',
-    'Item Type',
-    'Barcode',
-    'Availability',
-    'Actions',
+  const tableColumns = [
+    { key: 'title', label: 'Title' },
+    { key: 'author', label: 'Author' },
+    { key: 'classification', label: 'Classification' },
+    { key: 'itemType', label: 'Item Type' },
+    { key: 'barcode', label: 'Barcode' },
+    { key: 'availability', label: 'Availability' },
+    { key: 'actions', label: 'Actions' },
   ];
 
-  const tableRows = items.map((item) => [
-    <div key={`title-${item.barcode}`}>
-      <div className={styles.itemTitle}>{item.title}</div>
-      {item.subtitle && (
-        <div className={styles.itemSubtitle}>{item.subtitle}</div>
-      )}
-    </div>,
-    item.author || 'N/A',
-    item.classification || 'N/A',
-    getItemTypeBadge(item.library || 'book'),
-    <code key={`barcode-${item.barcode}`} className={styles.barcode}>
-      {item.barcode}
-    </code>,
-    getAvailabilityBadge(item),
-    <div key={`actions-${item.barcode}`} className={styles.actionButtons}>
-      <Link href={`/catalog/${item.controlNumber}`}>
-        <Button variant='secondary' size='sm'>
-          View
-        </Button>
-      </Link>
-      <Link href={`/catalog/${item.controlNumber}/edit`}>
-        <Button variant='primary' size='sm'>
-          Edit
-        </Button>
-      </Link>
-    </div>,
-  ]);
+  const tableData = items.map((item) => ({
+    title: (
+      <div key={`title-${item.barcode}`}>
+        <div className={styles.itemTitle}>{item.title || 'N/A'}</div>
+        {item.subtitle && (
+          <div className={styles.itemSubtitle}>{item.subtitle}</div>
+        )}
+      </div>
+    ),
+    author: item.author || 'N/A',
+    classification: item.classification || 'N/A',
+    itemType: getItemTypeBadge(item.library || 'book'),
+    barcode: (
+      <code key={`barcode-${item.barcode}`} className={styles.barcode}>
+        {item.barcode}
+      </code>
+    ),
+    availability: getAvailabilityBadge(item),
+    actions: (
+      <div key={`actions-${item.barcode}`} className={styles.actionButtons}>
+        <Link href={`/catalog/${encodeURIComponent(item.barcode)}`}>
+          <Button variant='secondary' size='sm'>
+            View
+          </Button>
+        </Link>
+        <Link href={`/catalog/${encodeURIComponent(item.barcode)}/edit`}>
+          <Button variant='primary' size='sm'>
+            Edit
+          </Button>
+        </Link>
+      </div>
+    ),
+  }));
 
   if (loading && items.length === 0) {
     return (
@@ -224,9 +227,6 @@ export default function CatalogPage() {
           <Button variant='secondary' onClick={clearFilters}>
             Clear Filters
           </Button>
-          <Button variant='primary' onClick={fetchItems}>
-            Search
-          </Button>
         </div>
       </Card>
 
@@ -241,7 +241,11 @@ export default function CatalogPage() {
       {/* Items Table */}
       {items.length > 0 ? (
         <>
-          <Table headers={tableHeaders} rows={tableRows} loading={loading} />
+          <Table
+            columns={tableColumns}
+            data={tableData}
+            rowsPerPage={tableData.length}
+          />
 
           {/* Pagination */}
           {totalPages > 1 && (
@@ -290,7 +294,6 @@ export default function CatalogPage() {
                 <Button variant='primary'>Add First Item</Button>
               </Link>
             )}
-            
           </div>
         </Card>
       )}

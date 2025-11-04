@@ -21,7 +21,7 @@ export default function BookSummariesPage() {
   const [formData, setFormData] = useState({
     patronBarcode: '',
     bookBarcode: '',
-    summary: '',
+    points: 5,
     rating: 5,
   });
 
@@ -76,13 +76,13 @@ export default function BookSummariesPage() {
   const handleSubmitSummary = async (e) => {
     e.preventDefault();
 
-    if (!formData.patronBarcode || !formData.bookBarcode || !formData.summary) {
+    if (!formData.patronBarcode || !formData.bookBarcode || !formData.points) {
       setError('All fields are required.');
       return;
     }
 
-    if (formData.summary.length < 100) {
-      setError('Summary must be at least 100 characters long.');
+    if (formData.points < 1 || formData.points > 20) {
+      setError('Bonus points must be between 1 and 20.');
       return;
     }
 
@@ -95,25 +95,28 @@ export default function BookSummariesPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          isStaffCreated: true,
+        }),
       });
 
       const data = await response.json();
 
       if (data.status) {
         setSuccess(
-          'Book summary submitted successfully! It will be reviewed by staff.'
+          'Book summary created successfully! Points have been awarded to the patron.'
         );
         setFormData({
           patronBarcode: '',
           bookBarcode: '',
-          summary: '',
+          points: 5,
           rating: 5,
         });
         setShowSubmitForm(false);
         fetchSummaries(); // Refresh the list
       } else {
-        setError(data.message || 'Failed to submit summary');
+        setError(data.message || 'Failed to create summary');
       }
     } catch (err) {
       setError('Network error. Please try again.');
@@ -152,7 +155,7 @@ export default function BookSummariesPage() {
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>📝 Book Summaries</h1>
         <p className={styles.pageSubtitle}>
-          Submit and manage book summaries for extra points
+          Create and manage book summary records for patrons
         </p>
       </div>
 
@@ -168,16 +171,17 @@ export default function BookSummariesPage() {
       )}
 
       <div className={styles.contentGrid}>
-        {/* Submit New Summary */}
-        <Card title='Submit Book Summary'>
+        {/* Create New Summary */}
+        <Card title='Create Book Summary'>
           {!showSubmitForm ? (
             <div className={styles.submitPrompt}>
               <p>
-                📚 Have you finished reading a book? Share your thoughts and
-                earn bonus points!
+                📚 Create a book summary record for a patron. Patrons
+                automatically get 25 points, plus you can award 1-20 bonus
+                points.
               </p>
               <Button variant='primary' onClick={() => setShowSubmitForm(true)}>
-                + Submit New Summary
+                + Create New Summary
               </Button>
             </div>
           ) : (
@@ -203,6 +207,19 @@ export default function BookSummariesPage() {
                   required
                 />
 
+                <Input
+                  label='Bonus Points to Award *'
+                  type='number'
+                  value={formData.points}
+                  onChange={(e) =>
+                    handleInputChange('points', parseInt(e.target.value))
+                  }
+                  placeholder='Enter bonus points (1-20)'
+                  min={1}
+                  max={20}
+                  required
+                />
+
                 <Select
                   label='Rating *'
                   value={formData.rating}
@@ -220,35 +237,9 @@ export default function BookSummariesPage() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Book Summary * (Current: {formData.summary.length} characters)
-                </label>
-                <textarea
-                  value={formData.summary}
-                  onChange={(e) => handleInputChange('summary', e.target.value)}
-                  placeholder='Write a detailed summary of the book. What was it about? What did you learn? What did you like or dislike? Be specific and thoughtful. (Minimum 100 characters)'
-                  className={styles.summaryTextarea}
-                  rows={8}
-                  required
-                  minLength={100}
-                />
-                <div className={styles.characterCount}>
-                  {formData.summary.length < 100 && (
-                    <span className={styles.characterWarning}>
-                      Need {100 - formData.summary.length} more characters
-                    </span>
-                  )}
-                </div>
-              </div>
-
               <div className={styles.formActions}>
-                <Button
-                  type='submit'
-                  variant='primary'
-                  disabled={submitting || formData.summary.length < 100}
-                >
-                  {submitting ? 'Submitting...' : 'Submit Summary'}
+                <Button type='submit' variant='primary' disabled={submitting}>
+                  {submitting ? 'Creating...' : 'Create Summary'}
                 </Button>
                 <Button
                   type='button'
@@ -258,7 +249,7 @@ export default function BookSummariesPage() {
                     setFormData({
                       patronBarcode: '',
                       bookBarcode: '',
-                      summary: '',
+                      points: 5,
                       rating: 5,
                     });
                   }}

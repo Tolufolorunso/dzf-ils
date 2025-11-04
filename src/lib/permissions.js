@@ -3,7 +3,7 @@
 
 const PERMISSIONS = {
   // Patron management permissions
-  PATRON_VIEW_ALL: ['admin', 'asst_admin', 'ict'], // Can view inactive patrons
+  PATRON_VIEW_ALL: ['admin', 'asst_admin', 'ict', 'librarian'], // Can view inactive patrons
   PATRON_ACTIVATE: ['admin', 'asst_admin', 'ict'], // Can reactivate patrons
   PATRON_DEACTIVATE: ['admin', 'asst_admin', 'ict'], // Can deactivate patrons
   PATRON_DELETE: ['admin'], // Can permanently delete patrons

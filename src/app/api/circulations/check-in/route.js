@@ -11,14 +11,19 @@ export async function POST(request) {
     await dbConnect();
     await delay(200); // ⏳ Optional small delay for UX
 
-    const { patronBarcode, itemBarcode, point } = await request.json();
+    const { patronBarcode, itemBarcode } = await request.json();
 
-    if (!patronBarcode || !itemBarcode || point === undefined) {
+    if (!patronBarcode || !itemBarcode) {
       return NextResponse.json(
-        { status: false, message: 'All fields are required' },
+        {
+          status: false,
+          message: 'Patron barcode and item barcode are required',
+        },
         { status: StatusCodes.BAD_REQUEST }
       );
     }
+
+    const point = 15; // Fixed 15 points for returning books
 
     // 🧭 Fetch patron and catalog item concurrently
     const [patron, catalogItem] = await Promise.all([

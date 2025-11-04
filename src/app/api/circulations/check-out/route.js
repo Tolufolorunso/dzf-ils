@@ -82,6 +82,27 @@ export async function POST(request) {
       );
     }
 
+    // Check monthly borrowing limit (4 books per month)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+
+    const monthlyActivity = await MonthlyActivity.findOne({
+      patronId: patron._id,
+      year,
+      month,
+    });
+
+    if (monthlyActivity && monthlyActivity.booksCheckedOut >= 4) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: `You have reached the monthly limit of 4 book borrowings. You have borrowed ${monthlyActivity.booksCheckedOut} books this month. Please wait until next month to borrow more books.`,
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
     if (patron.hasBorrowedBook) {
       return NextResponse.json(
         {
@@ -144,14 +165,23 @@ export async function POST(request) {
     patron.hasBorrowedBook = true;
     await patron.save();
 
-    // 📊 Update monthly activity
+    // 📊 Update monthly activity and award points
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
+    const checkoutPoints = 10; // Fixed 10 points for borrowing books
+
+    // Award points to patron
+    await Patron.findByIdAndUpdate(patron._id, {
+      $inc: { points: checkoutPoints },
+    });
 
     await MonthlyActivity.findOneAndUpdate(
       { patronId: patron._id, year, month },
       {
-        $inc: { booksCheckedOut: 1 },
+        $inc: {
+          booksCheckedOut: 1,
+          totalPoints: checkoutPoints,
+        },
         $set: {
           patronBarcode: patron.barcode,
           patronName: `${patron.firstname} ${patron.surname}`,
