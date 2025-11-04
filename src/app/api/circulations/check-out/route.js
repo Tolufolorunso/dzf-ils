@@ -166,8 +166,8 @@ export async function POST(request) {
     await patron.save();
 
     // 📊 Update monthly activity and award points
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
     const checkoutPoints = 10; // Fixed 10 points for borrowing books
 
     // Award points to patron
@@ -176,7 +176,7 @@ export async function POST(request) {
     });
 
     await MonthlyActivity.findOneAndUpdate(
-      { patronId: patron._id, year, month },
+      { patronId: patron._id, year: currentYear, month: currentMonth },
       {
         $inc: {
           booksCheckedOut: 1,

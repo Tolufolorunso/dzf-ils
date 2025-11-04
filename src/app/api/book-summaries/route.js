@@ -156,31 +156,29 @@ export async function POST(request) {
       }
     }
 
-    // Check if summary already exists for this book (only one summary per book allowed)
+    // Check if summary already exists for this book by this patron
     const existingSummary = await BookSummary.findOne({
+      patronBarcode,
       bookBarcode,
     });
 
     if (existingSummary) {
-      const isOwnSummary = existingSummary.patronBarcode === patronBarcode;
-      const statusMessage = isOwnSummary
-        ? existingSummary.status === 'pending'
+      const statusMessage =
+        existingSummary.status === 'pending'
           ? 'Your summary is currently being reviewed by staff.'
           : existingSummary.status === 'approved'
           ? `Your summary was approved and you earned ${existingSummary.points} points.`
-          : 'Your summary was reviewed by staff.'
-        : `A summary for this book has already been submitted by ${existingSummary.patronName}.`;
+          : 'Your summary was reviewed by staff.';
 
       return NextResponse.json(
         {
           status: false,
-          message: `A summary for "${book.title.mainTitle}" already exists. ${statusMessage} Only one summary per book is allowed in the system.`,
+          message: `You have already submitted a summary for "${book.title.mainTitle}". ${statusMessage} Each student can only submit one summary per book, regardless of how many times you borrow it.`,
           existingSummary: {
             submissionDate: existingSummary.submissionDate,
             status: existingSummary.status,
             points: existingSummary.points,
             rating: existingSummary.rating,
-            patronName: existingSummary.patronName,
           },
         },
         { status: StatusCodes.BAD_REQUEST }
