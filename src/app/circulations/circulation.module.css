@@ -691,7 +691,8 @@
 }
 
 .pointsInput {
-  max-width: 200px;
+  /* max-width: 200px; */
+  padding: 0 0.5rem;
 }
 
 .feedbackInput {

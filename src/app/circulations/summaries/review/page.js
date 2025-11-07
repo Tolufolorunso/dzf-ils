@@ -16,6 +16,7 @@ export default function ReviewSummariesPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [reviewData, setReviewData] = useState({});
+  const [pointError, setPointError] = useState('');
 
   useEffect(() => {
     fetchPendingSummaries();
@@ -45,10 +46,10 @@ export default function ReviewSummariesPage() {
     if (field === 'points') {
       const numValue = parseInt(value);
       if (value !== '' && (numValue < 1 || numValue > 20)) {
-        setError('No way! Points must be between 1 and 20.');
+        setPointError('No way! Points must be between 1 and 20.');
         return; // Don't update the state
       } else {
-        setError(''); // Clear error if valid
+        setPointError(''); // Clear error if valid
       }
     }
 
@@ -70,7 +71,7 @@ export default function ReviewSummariesPage() {
         return;
       }
       if (review.points > 20) {
-        setError('No way! Points cannot exceed 20.');
+        setPointError('No way! Points cannot exceed 20.');
         return;
       }
     }
@@ -182,10 +183,10 @@ export default function ReviewSummariesPage() {
                     <div className={styles.summaryInfo}>
                       <div className={styles.summaryMeta}>
                         <div className={styles.metaItem}>
-                          <strong>Patron:</strong> {summary.patronName}
+                          <strong>Patron:</strong> ********
                         </div>
                         <div className={styles.metaItem}>
-                          <strong>Barcode:</strong> {summary.patronBarcode}
+                          <strong>Barcode:</strong> ********
                         </div>
                         <div className={styles.metaItem}>
                           <strong>Book:</strong> {summary.bookTitle}
@@ -234,7 +235,7 @@ export default function ReviewSummariesPage() {
                                 e.target.value !== '' &&
                                 (value < 1 || value > 20)
                               ) {
-                                setError(
+                                setPointError(
                                   'No way! Points must be between 1 and 20.'
                                 );
                               }
@@ -243,6 +244,13 @@ export default function ReviewSummariesPage() {
                             max='20'
                             placeholder='Enter points (1-20)'
                           />
+                          {pointError && (
+                            <Alert
+                              type='error'
+                              message={pointError}
+                              onClose={() => setPointError('')}
+                            />
+                          )}
                         </div>
 
                         <div className={styles.feedbackInput}>
