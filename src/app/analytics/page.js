@@ -51,10 +51,10 @@ export default function AnalyticsPage() {
   };
 
   const getRankBadge = (rank) => {
-    if (rank === 1) return <Badge variant='primary'>🥇 1st</Badge>;
-    if (rank === 2) return <Badge variant='secondary'>🥈 2nd</Badge>;
-    if (rank === 3) return <Badge variant='warning'>🥉 3rd</Badge>;
-    return <Badge variant='default'>#{rank}</Badge>;
+    if (rank === 1) return <Badge variant='primary' label='🥇 1st' />;
+    if (rank === 2) return <Badge variant='secondary' label='🥈 2nd' />;
+    if (rank === 3) return <Badge variant='warning' label='🥉 3rd' />;
+    return <Badge variant='default' label={`#${rank}`} />;
   };
 
   const monthOptions = [
@@ -265,7 +265,7 @@ export default function AnalyticsPage() {
                           {patron.barcode}
                         </div>
                       </div>
-                      <Badge variant='default'>{patron.patronType}</Badge>
+                      <Badge variant='default' label={patron.patronType} />
                     </div>
                   ))}
                 </div>

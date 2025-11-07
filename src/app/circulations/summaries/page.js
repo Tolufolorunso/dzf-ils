@@ -25,6 +25,9 @@ export default function BookSummariesPage() {
     rating: 5,
   });
 
+  // Field validation state
+  const [pointsError, setPointsError] = useState('');
+
   // Filter states
   const [filters, setFilters] = useState({
     status: '',
@@ -64,6 +67,15 @@ export default function BookSummariesPage() {
       ...prev,
       [field]: value,
     }));
+
+    // Validate points field in real-time
+    if (field === 'points') {
+      if (isNaN(value) || value < 1 || value > 20) {
+        setPointsError('No way! Points must be between 1 and 20 only.');
+      } else {
+        setPointsError('');
+      }
+    }
   };
 
   const handleFilterChange = (field, value) => {
@@ -81,9 +93,8 @@ export default function BookSummariesPage() {
       return;
     }
 
-    if (formData.points < 1 || formData.points > 20) {
-      setError('Bonus points must be between 1 and 20.');
-      return;
+    if (isNaN(formData.points) || formData.points < 1 || formData.points > 20) {
+      return; // Error already shown below the field
     }
 
     try {
@@ -113,6 +124,7 @@ export default function BookSummariesPage() {
           points: 5,
           rating: 5,
         });
+        setPointsError('');
         setShowSubmitForm(false);
         fetchSummaries(); // Refresh the list
       } else {
@@ -207,18 +219,32 @@ export default function BookSummariesPage() {
                   required
                 />
 
-                <Input
-                  label='Bonus Points to Award *'
-                  type='number'
-                  value={formData.points}
-                  onChange={(e) =>
-                    handleInputChange('points', parseInt(e.target.value))
-                  }
-                  placeholder='Enter bonus points (1-20)'
-                  min={1}
-                  max={20}
-                  required
-                />
+                <div>
+                  <Input
+                    label='Bonus Points to Award *'
+                    type='number'
+                    value={formData.points}
+                    onChange={(e) =>
+                      handleInputChange('points', parseInt(e.target.value))
+                    }
+                    placeholder='Enter bonus points (1-20)'
+                    min={1}
+                    max={20}
+                    required
+                  />
+                  {pointsError && (
+                    <div
+                      style={{
+                        color: '#dc3545',
+                        fontSize: '0.875rem',
+                        marginTop: '0.25rem',
+                        fontWeight: '500',
+                      }}
+                    >
+                      {pointsError}
+                    </div>
+                  )}
+                </div>
 
                 <Select
                   label='Rating *'
@@ -238,7 +264,11 @@ export default function BookSummariesPage() {
               </div>
 
               <div className={styles.formActions}>
-                <Button type='submit' variant='primary' disabled={submitting}>
+                <Button
+                  type='submit'
+                  variant='primary'
+                  disabled={submitting || pointsError}
+                >
                   {submitting ? 'Creating...' : 'Create Summary'}
                 </Button>
                 <Button
@@ -252,6 +282,7 @@ export default function BookSummariesPage() {
                       points: 5,
                       rating: 5,
                     });
+                    setPointsError('');
                   }}
                   disabled={submitting}
                 >

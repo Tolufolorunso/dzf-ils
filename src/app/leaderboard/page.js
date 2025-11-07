@@ -51,11 +51,11 @@ export default function PublicLeaderboardPage() {
   };
 
   const getRankBadge = (rank) => {
-    if (rank === 1) return <Badge variant='primary'>🥇 Champion</Badge>;
-    if (rank === 2) return <Badge variant='secondary'>🥈 Runner-up</Badge>;
-    if (rank === 3) return <Badge variant='warning'>🥉 Third Place</Badge>;
-    if (rank <= 10) return <Badge variant='success'>🏆 Top 10</Badge>;
-    return <Badge variant='default'>#{rank}</Badge>;
+    if (rank === 1) return <Badge variant='primary' label='🥇 Champion' />;
+    if (rank === 2) return <Badge variant='secondary' label='🥈 Runner-up' />;
+    if (rank === 3) return <Badge variant='warning' label='🥉 Third Place' />;
+    if (rank <= 10) return <Badge variant='success' label='🏆 Top 10' />;
+    return <Badge variant='default' lable={`#${rank}`} />;
   };
 
   const getRankEmoji = (rank) => {
@@ -180,12 +180,11 @@ export default function PublicLeaderboardPage() {
                   </div>
                 </div>
               </Card>
-
               {/* Top 3 Podium */}
-              {leaderboardData.leaderboard.length >= 3 && (
-                <Card title="🏆 This Month's Top Champions">
-                  <div className={styles.podium}>
-                    {/* Second Place */}
+              <Card title="🏆 This Month's Top Champions">
+                <div className={styles.podium}>
+                  {/* Second Place */}
+                  {leaderboardData.leaderboard.length >= 2 && (
                     <div
                       className={`${styles.podiumPosition} ${styles.second}`}
                     >
@@ -203,26 +202,28 @@ export default function PublicLeaderboardPage() {
                         {leaderboardData.leaderboard[1].activityScore} pts
                       </div>
                     </div>
+                  )}
 
-                    {/* First Place */}
-                    <div className={`${styles.podiumPosition} ${styles.first}`}>
-                      <div className={styles.podiumRank}>🥇</div>
-                      <Avatar
-                        size='xl'
-                        initial={getInitials(
-                          leaderboardData.leaderboard[0].patronName
-                        )}
-                      />
-                      <div className={styles.podiumName}>
-                        {leaderboardData.leaderboard[0].patronName}
-                      </div>
-                      <div className={styles.podiumScore}>
-                        {leaderboardData.leaderboard[0].activityScore} pts
-                      </div>
-                      <div className={styles.championBadge}>👑 CHAMPION</div>
+                  {/* First Place */}
+                  <div className={`${styles.podiumPosition} ${styles.first}`}>
+                    <div className={styles.podiumRank}>🥇</div>
+                    <Avatar
+                      size='xl'
+                      initial={getInitials(
+                        leaderboardData.leaderboard[0].patronName
+                      )}
+                    />
+                    <div className={styles.podiumName}>
+                      {leaderboardData.leaderboard[0].patronName}
                     </div>
+                    <div className={styles.podiumScore}>
+                      {leaderboardData.leaderboard[0].activityScore} pts
+                    </div>
+                    <div className={styles.championBadge}>👑 CHAMPION</div>
+                  </div>
 
-                    {/* Third Place */}
+                  {/* Third Place */}
+                  {leaderboardData.leaderboard.length >= 3 && (
                     <div className={`${styles.podiumPosition} ${styles.third}`}>
                       <div className={styles.podiumRank}>🥉</div>
                       <Avatar
@@ -238,10 +239,9 @@ export default function PublicLeaderboardPage() {
                         {leaderboardData.leaderboard[2].activityScore} pts
                       </div>
                     </div>
-                  </div>
-                </Card>
-              )}
-
+                  )}
+                </div>
+              </Card>
               {/* Full Leaderboard */}
               <Card title='📋 Complete Rankings'>
                 <div className={styles.leaderboard}>

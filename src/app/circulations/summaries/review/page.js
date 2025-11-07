@@ -41,6 +41,17 @@ export default function ReviewSummariesPage() {
   };
 
   const handleReviewDataChange = (summaryId, field, value) => {
+    // Validate points field
+    if (field === 'points') {
+      const numValue = parseInt(value);
+      if (value !== '' && (numValue < 1 || numValue > 20)) {
+        setError('No way! Points must be between 1 and 20.');
+        return; // Don't update the state
+      } else {
+        setError(''); // Clear error if valid
+      }
+    }
+
     setReviewData((prev) => ({
       ...prev,
       [summaryId]: {
@@ -53,9 +64,15 @@ export default function ReviewSummariesPage() {
   const handleReviewSummary = async (summaryId, status) => {
     const review = reviewData[summaryId] || {};
 
-    if (status === 'approved' && (!review.points || review.points < 1)) {
-      setError('Please specify points to award for approved summaries.');
-      return;
+    if (status === 'approved') {
+      if (!review.points || review.points < 1) {
+        setError('Please specify points to award for approved summaries.');
+        return;
+      }
+      if (review.points > 20) {
+        setError('No way! Points cannot exceed 20.');
+        return;
+      }
     }
 
     try {
@@ -111,14 +128,6 @@ export default function ReviewSummariesPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getSuggestedPoints = (summary) => {
-    // Suggest points based on summary length and rating
-    const basePoints = 10;
-    const lengthBonus = Math.min(Math.floor(summary.summary.length / 100), 5);
-    const ratingBonus = summary.rating * 2;
-    return basePoints + lengthBonus + ratingBonus;
-  };
-
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
@@ -161,7 +170,6 @@ export default function ReviewSummariesPage() {
           <div className={styles.reviewGrid}>
             {summaries.map((summary) => {
               const review = reviewData[summary._id] || {};
-              const suggestedPoints = getSuggestedPoints(summary);
               const isReviewing = reviewing[summary._id];
 
               return (
@@ -210,9 +218,9 @@ export default function ReviewSummariesPage() {
                       <div className={styles.reviewInputs}>
                         <div className={styles.pointsInput}>
                           <Input
-                            label={`Points to Award (Suggested: ${suggestedPoints})`}
+                            label='Points to Award'
                             type='number'
-                            value={review.points || suggestedPoints}
+                            value={review.points || ''}
                             onChange={(e) =>
                               handleReviewDataChange(
                                 summary._id,
@@ -220,9 +228,20 @@ export default function ReviewSummariesPage() {
                                 e.target.value
                               )
                             }
+                            onBlur={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (
+                                e.target.value !== '' &&
+                                (value < 1 || value > 20)
+                              ) {
+                                setError(
+                                  'No way! Points must be between 1 and 20.'
+                                );
+                              }
+                            }}
                             min='1'
-                            max='50'
-                            placeholder={suggestedPoints.toString()}
+                            max='20'
+                            placeholder='Enter points (1-20)'
                           />
                         </div>
 
@@ -265,9 +284,7 @@ export default function ReviewSummariesPage() {
                         >
                           {isReviewing
                             ? 'Processing...'
-                            : `✅ Approve (+${
-                                review.points || suggestedPoints
-                              } pts)`}
+                            : `✅ Approve (+${review.points || 0} pts)`}
                         </Button>
                       </div>
                     </div>

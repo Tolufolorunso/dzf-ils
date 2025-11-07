@@ -43,7 +43,7 @@ export async function GET(request) {
     }
 
     // Get top performers
-    const topPerformers = monthlyActivities.slice(0, 10);
+    const topPerformers = monthlyActivities.slice(0, 30);
 
     // Get inactive patrons (no activity this month) - excluding teachers, staff, and guests, and only active patrons
     const allPatrons = await Patron.find({
@@ -95,7 +95,7 @@ export async function GET(request) {
           month,
           stats,
           leaderboard: topPerformers,
-          inactivePatrons: inactivePatrons.slice(0, 20), // Limit to 20
+          inactivePatrons: inactivePatrons, // Show all inactive patrons
           allActivities: monthlyActivities,
         },
       },
