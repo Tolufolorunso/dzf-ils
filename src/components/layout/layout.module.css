@@ -357,6 +357,7 @@
   .navOpen {
     opacity: 1;
     visibility: visible;
+    pointer-events: all;
     transform: translateY(0);
   }
 
