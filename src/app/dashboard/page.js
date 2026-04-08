@@ -145,6 +145,20 @@ export default function DashboardPage() {
       </div>
 
       <div className={styles.dashboardGrid}>
+        <Card title='Competition Management'>
+          <div className={styles.cardContent}>
+            <p className={styles.cardDescription}>
+              Manage competitions and scores.
+            </p>
+            <div className={styles.cardActions}>
+              <Link href='/competitions/reading'>
+                <Button variant='primary' className={styles.actionButton}>
+                  Reading Competition
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
         <Card title='Circulation Management'>
           <div className={styles.cardContent}>
             <p className={styles.cardDescription}>
@@ -189,6 +203,10 @@ export default function DashboardPage() {
               >
                 <div className={styles.quickActionIcon}>⚠️</div>
                 <span>Overdues</span>
+              </Link>
+              <Link href='/cohorts' className={styles.quickAction}>
+                <div className={styles.quickActionIcon}>⚠️</div>
+                <span>Cohort Page</span>
               </Link>
             </div>
           </div>

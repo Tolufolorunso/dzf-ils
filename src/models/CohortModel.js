@@ -1,4 +1,5 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+import { normalizeCohortType } from '@/lib/cohort-utils';
 
 const CohortSchema = new mongoose.Schema(
   {
@@ -24,7 +25,10 @@ const CohortSchema = new mongoose.Schema(
     cohortType: {
       type: String,
       required: true,
+      trim: true,
+      set: normalizeCohortType,
     },
+    removedAt: Date,
     attendance: [
       {
         date: Date,
@@ -37,6 +41,9 @@ const CohortSchema = new mongoose.Schema(
     ],
   },
   { timestamps: true }
-)
+);
 
-export default mongoose.models.Cohort || mongoose.model('Cohort', CohortSchema)
+CohortSchema.index({ cohortType: 1, active: 1 });
+CohortSchema.index({ barcode: 1, active: 1 });
+
+export default mongoose.models.Cohort || mongoose.model('Cohort', CohortSchema);
