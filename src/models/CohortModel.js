@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-import { normalizeCohortType } from '@/lib/cohort-utils';
 
 const CohortSchema = new mongoose.Schema(
   {
@@ -26,7 +25,6 @@ const CohortSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      set: normalizeCohortType,
     },
     removedAt: Date,
     attendance: [

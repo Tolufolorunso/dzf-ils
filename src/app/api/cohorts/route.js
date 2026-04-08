@@ -437,11 +437,11 @@ async function handleRenameCohort(body, user) {
   }
 
   const [currentGroup, targetGroup, affectedStudents] = await Promise.all([
-    CohortGroup.findOne({ cohortType: currentCohortType }),
+    CohortGroup.collection.findOne({ cohortType: currentCohortType }),
     currentCohortType === newCohortType
-      ? CohortGroup.findOne({ cohortType: currentCohortType })
-      : CohortGroup.findOne({ cohortType: newCohortType }),
-    Cohort.countDocuments({ cohortType: currentCohortType }),
+      ? CohortGroup.collection.findOne({ cohortType: currentCohortType })
+      : CohortGroup.collection.findOne({ cohortType: newCohortType }),
+    Cohort.collection.countDocuments({ cohortType: currentCohortType }),
   ]);
 
   if (!currentGroup && affectedStudents === 0) {
@@ -452,7 +452,7 @@ async function handleRenameCohort(body, user) {
   }
 
   if (currentCohortType !== newCohortType) {
-    await Cohort.updateMany(
+    await Cohort.collection.updateMany(
       { cohortType: currentCohortType },
       { $set: { cohortType: newCohortType } }
     );
@@ -463,26 +463,46 @@ async function handleRenameCohort(body, user) {
       targetGroup &&
       currentGroup._id.toString() !== targetGroup._id.toString()
     ) {
-      targetGroup.description = description || targetGroup.description;
-      targetGroup.updatedBy = staffName;
-      targetGroup.active = true;
-      await targetGroup.save();
-      await currentGroup.deleteOne();
+      await CohortGroup.collection.updateOne(
+        { _id: targetGroup._id },
+        {
+          $set: {
+            description: description || targetGroup.description || '',
+            updatedBy: staffName,
+            active: true,
+            updatedAt: new Date(),
+          },
+        }
+      );
+      await CohortGroup.collection.deleteOne({ _id: currentGroup._id });
     } else {
-      currentGroup.cohortType = newCohortType;
-      currentGroup.displayName = newCohortType;
-      currentGroup.description = description || currentGroup.description;
-      currentGroup.updatedBy = staffName;
-      currentGroup.active = true;
-      await currentGroup.save();
+      await CohortGroup.collection.updateOne(
+        { _id: currentGroup._id },
+        {
+          $set: {
+            cohortType: newCohortType,
+            displayName: newCohortType,
+            description: description || currentGroup.description || '',
+            updatedBy: staffName,
+            active: true,
+            updatedAt: new Date(),
+          },
+        }
+      );
     }
   } else if (!targetGroup) {
-    await CohortGroup.create({
+    await CohortGroup.collection.insertOne({
       cohortType: newCohortType,
       displayName: newCohortType,
       description,
       createdBy: staffName,
       updatedBy: staffName,
+      active: true,
+      order: DEFAULT_COHORT_TYPES.includes(newCohortType)
+        ? DEFAULT_COHORT_TYPES.indexOf(newCohortType) + 1
+        : 100,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
