@@ -8,7 +8,6 @@ import Cataloging from '@/models/CatalogingModel';
 import Library from '@/models/Library';
 
 const COMPETITION_TYPE = 'reading';
-const MIN_SUMMARY_LENGTH = 50;
 const ALLOWED_COMPETITION_ROLES = ['admin', 'asst_admin', 'ict', 'librarian'];
 const LEADERBOARD_LIMIT = 75;
 const CATEGORY_ORDER = [
@@ -137,8 +136,8 @@ async function getSessionMeta() {
 function rankLeaderboard(entries) {
   const sorted = [...entries].sort((left, right) => {
     return (
-      right.booksRead - left.booksRead ||
       right.averageGrade - left.averageGrade ||
+      right.booksRead - left.booksRead ||
       right.teacherVerifiedCount - left.teacherVerifiedCount ||
       right.latestCheckinTime - left.latestCheckinTime ||
       left.patronName.localeCompare(right.patronName)
@@ -259,7 +258,7 @@ async function buildCompetitionData() {
     patrons.map((patron) => [
       patron.barcode,
       getClassInfo(patron.studentSchoolInfo?.currentClass),
-    ])
+    ]),
   );
 
   participantMap.forEach((participant, barcode) => {
@@ -270,13 +269,15 @@ async function buildCompetitionData() {
   });
 
   activeCheckouts.forEach((record) => {
-    const classInfo = patronClassMap.get(record.patronBarcode) || getClassInfo('');
+    const classInfo =
+      patronClassMap.get(record.patronBarcode) || getClassInfo('');
     record.currentClass = classInfo.currentClass;
     record.categoryLabel = classInfo.categoryLabel;
   });
 
   recentCheckins.forEach((record) => {
-    const classInfo = patronClassMap.get(record.patronBarcode) || getClassInfo('');
+    const classInfo =
+      patronClassMap.get(record.patronBarcode) || getClassInfo('');
     record.currentClass = classInfo.currentClass;
     record.categoryLabel = classInfo.categoryLabel;
   });
@@ -287,7 +288,7 @@ async function buildCompetitionData() {
       averageGrade: participant.gradedCount
         ? roundToOneDecimal(participant.totalGrade / participant.gradedCount)
         : 0,
-    })
+    }),
   );
 
   const rankedLeaderboard = rankLeaderboard(leaderboardEntries);
@@ -332,7 +333,9 @@ async function buildCompetitionData() {
       activeCheckouts: activeCheckouts.length,
       gradedSummaries: gradedCount,
       verifiedSummaries,
-      averageGrade: gradedCount ? roundToOneDecimal(totalGrade / gradedCount) : 0,
+      averageGrade: gradedCount
+        ? roundToOneDecimal(totalGrade / gradedCount)
+        : 0,
       leaderboardCount: topLeaderboard.length,
     },
     leaderboard: topLeaderboard,
@@ -344,7 +347,7 @@ async function buildCompetitionData() {
       .sort(
         (left, right) =>
           new Date(right.checkinDate || 0).getTime() -
-          new Date(left.checkinDate || 0).getTime()
+          new Date(left.checkinDate || 0).getTime(),
       )
       .slice(0, 10),
   };
@@ -361,7 +364,7 @@ async function handleCheckout(body, user) {
         status: false,
         message: 'Patron barcode and book barcode are required.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -381,24 +384,24 @@ async function handleCheckout(body, user) {
   if (!patron) {
     return NextResponse.json(
       { status: false, message: 'Patron not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
-  if (!patron.active) {
-    return NextResponse.json(
-      {
-        status: false,
-        message: 'This patron is inactive and cannot participate right now.',
-      },
-      { status: StatusCodes.FORBIDDEN }
-    );
-  }
+  // if (!patron.active) {
+  //   return NextResponse.json(
+  //     {
+  //       status: false,
+  //       message: 'This patron is inactive and cannot participate right now.',
+  //     },
+  //     { status: StatusCodes.FORBIDDEN },
+  //   );
+  // }
 
   if (!book) {
     return NextResponse.json(
       { status: false, message: 'Book not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
@@ -409,7 +412,7 @@ async function handleCheckout(body, user) {
         message:
           'This patron has already borrowed this book during the current competition session and cannot borrow it again.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -420,7 +423,7 @@ async function handleCheckout(body, user) {
         message:
           'This patron already has a borrowed book. Please check it in before another competition checkout.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -430,7 +433,7 @@ async function handleCheckout(body, user) {
         status: false,
         message: 'This book is already checked out to another patron.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -451,7 +454,7 @@ async function handleCheckout(body, user) {
   patron.hasBorrowedBook = true;
 
   const hasBorrowedBefore = patron.itemsCheckedOutHistory.some(
-    (item) => item.itemBarcode === book.barcode
+    (item) => item.itemBarcode === book.barcode,
   );
 
   if (!hasBorrowedBefore) {
@@ -492,7 +495,7 @@ async function handleCheckout(body, user) {
           message:
             'This book has already been logged for the patron in the active competition.',
         },
-        { status: StatusCodes.CONFLICT }
+        { status: StatusCodes.CONFLICT },
       );
     }
 
@@ -510,7 +513,7 @@ async function handleCheckout(body, user) {
         bookBarcode: book.barcode,
       },
     },
-    { status: StatusCodes.CREATED }
+    { status: StatusCodes.CREATED },
   );
 }
 
@@ -524,7 +527,7 @@ async function handleUpdateClass(body) {
         status: false,
         message: 'Patron barcode and current class are required.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -537,7 +540,7 @@ async function handleUpdateClass(body) {
         message:
           'Current class must match Primary 1-6, JSS1-3, or SS1-3 for competition ranking.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -546,7 +549,7 @@ async function handleUpdateClass(body) {
   if (!patron) {
     return NextResponse.json(
       { status: false, message: 'Patron not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
@@ -569,7 +572,7 @@ async function handleUpdateClass(body) {
         categoryLabel: classInfo.categoryLabel,
       },
     },
-    { status: StatusCodes.OK }
+    { status: StatusCodes.OK },
   );
 }
 
@@ -588,17 +591,7 @@ async function handleCheckin(body, user) {
         status: false,
         message: 'Patron barcode and book barcode are required.',
       },
-      { status: StatusCodes.BAD_REQUEST }
-    );
-  }
-
-  if (!summary || summary.length < MIN_SUMMARY_LENGTH) {
-    return NextResponse.json(
-      {
-        status: false,
-        message: `Summary is required and must be at least ${MIN_SUMMARY_LENGTH} characters long.`,
-      },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -608,7 +601,7 @@ async function handleCheckin(body, user) {
         status: false,
         message: 'Grade must be a number between 0 and 100.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -636,14 +629,14 @@ async function handleCheckin(body, user) {
   if (!patron) {
     return NextResponse.json(
       { status: false, message: 'Patron not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
   if (!book) {
     return NextResponse.json(
       { status: false, message: 'Book not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
@@ -654,7 +647,7 @@ async function handleCheckin(body, user) {
         message:
           'This competition reading has already been checked in and graded for the current session.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -665,7 +658,7 @@ async function handleCheckin(body, user) {
         message:
           'No active competition checkout was found for this patron and book.',
       },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
@@ -678,7 +671,7 @@ async function handleCheckin(body, user) {
         message:
           'This book is already marked as checked in. Please confirm the circulation record.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -688,7 +681,7 @@ async function handleCheckin(body, user) {
         status: false,
         message: 'This book is currently checked out to a different patron.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -725,7 +718,7 @@ async function handleCheckin(body, user) {
         teacherVerified,
       },
     },
-    { status: StatusCodes.OK }
+    { status: StatusCodes.OK },
   );
 }
 
@@ -737,7 +730,7 @@ export async function GET(request) {
     if (!auth.status) {
       return NextResponse.json(
         { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
       );
     }
 
@@ -748,7 +741,7 @@ export async function GET(request) {
           message:
             'Only library staff can view or manage reading competition records.',
         },
-        { status: StatusCodes.FORBIDDEN }
+        { status: StatusCodes.FORBIDDEN },
       );
     }
 
@@ -760,7 +753,7 @@ export async function GET(request) {
         message: 'Competition data fetched successfully.',
         data,
       },
-      { status: StatusCodes.OK }
+      { status: StatusCodes.OK },
     );
   } catch (error) {
     console.error('Competition fetch error:', error);
@@ -771,7 +764,7 @@ export async function GET(request) {
         error:
           process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR }
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 }
@@ -784,7 +777,7 @@ export async function POST(request) {
     if (!auth.status) {
       return NextResponse.json(
         { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
       );
     }
 
@@ -795,7 +788,7 @@ export async function POST(request) {
           message:
             'Only library staff can record competition checkouts and check-ins.',
         },
-        { status: StatusCodes.FORBIDDEN }
+        { status: StatusCodes.FORBIDDEN },
       );
     }
 
@@ -817,9 +810,10 @@ export async function POST(request) {
     return NextResponse.json(
       {
         status: false,
-        message: 'Invalid competition action. Use checkout, checkin, or updateclass.',
+        message:
+          'Invalid competition action. Use checkout, checkin, or updateclass.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   } catch (error) {
     console.error('Competition action error:', error);
@@ -830,7 +824,7 @@ export async function POST(request) {
         error:
           process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR }
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 }

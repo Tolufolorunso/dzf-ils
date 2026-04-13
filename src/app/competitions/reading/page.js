@@ -20,7 +20,7 @@ const initialCheckinForm = {
   summary: '',
   grade: '',
   feedback: '',
-  teacherVerified: 'no',
+  teacherVerified: 'yes',
 };
 
 const initialClassForm = {
@@ -238,7 +238,7 @@ export default function ReadingCompetitionPage() {
       }
 
       setClassSuccess(
-        `${data.data.patronName} is now in ${data.data.currentClass} (${data.data.categoryLabel}).`
+        `${data.data.patronName} is now in ${data.data.currentClass} (${data.data.categoryLabel}).`,
       );
       setClassForm(initialClassForm);
       fetchCompetitionData({ background: true });
@@ -270,8 +270,8 @@ export default function ReadingCompetitionPage() {
               Run the reading competition by category from one page.
             </h1>
             <p className={styles.subtitle}>
-              Staff can log borrowing, update each student&apos;s class, check in
-              books with graded summaries, and monitor category winners for
+              Staff can log borrowing, update each student&apos;s class, check
+              in books with graded summaries, and monitor category winners for
               Primary, Junior Secondary, and Senior Secondary. Only the top 75
               readers across all categories are shown on the leaderboard.
             </p>
@@ -309,7 +309,9 @@ export default function ReadingCompetitionPage() {
         {loading ? (
           <Card title='Loading Competition'>
             <div className={styles.emptyState}>
-              <p>Fetching competition records, category winners, and rankings.</p>
+              <p>
+                Fetching competition records, category winners, and rankings.
+              </p>
             </div>
           </Card>
         ) : (
@@ -454,10 +456,8 @@ export default function ReadingCompetitionPage() {
                     name='summary'
                     value={checkinForm.summary}
                     onChange={handleCheckinChange}
-                    placeholder='Record the student summary here before grading.'
+                    placeholder='Optional student summary for staff records.'
                     rows={5}
-                    minLength={50}
-                    required
                   />
                   <Input
                     label='Grade'
@@ -476,8 +476,8 @@ export default function ReadingCompetitionPage() {
                     value={checkinForm.teacherVerified}
                     onChange={handleCheckinChange}
                     options={[
-                      { value: 'no', label: 'No' },
                       { value: 'yes', label: 'Yes' },
+                      { value: 'no', label: 'No' },
                     ]}
                   />
                   <TextArea
@@ -531,7 +531,13 @@ export default function ReadingCompetitionPage() {
                       onClose={() => setClassSuccess('')}
                     />
                   )}
-
+                  <Select
+                    label='Current Class'
+                    name='currentClass'
+                    value={classForm.currentClass}
+                    onChange={handleClassChange}
+                    options={classOptions}
+                  />
                   <Input
                     label='Patron Barcode'
                     name='patronBarcode'
@@ -540,14 +546,6 @@ export default function ReadingCompetitionPage() {
                     placeholder='Scan or enter patron barcode'
                     required
                   />
-                  <Select
-                    label='Current Class'
-                    name='currentClass'
-                    value={classForm.currentClass}
-                    onChange={handleClassChange}
-                    options={classOptions}
-                  />
-
                   <div className={styles.formActions}>
                     <Button
                       type='submit'
@@ -581,7 +579,8 @@ export default function ReadingCompetitionPage() {
                     Competition borrowing has no due date on this page.
                   </div>
                   <div className={styles.ruleItem}>
-                    Check-in requires a recorded summary and a grade.
+                    Check-in requires a grade. Student summary and staff
+                    feedback are optional.
                   </div>
                   <div className={styles.ruleItem}>
                     Staff can update a patron&apos;s current class here so the
@@ -596,7 +595,7 @@ export default function ReadingCompetitionPage() {
                     combined across all categories.
                   </div>
                   <div className={styles.ruleItem}>
-                    Ranking follows books read first, then average grade, then
+                    Ranking follows average grade first, then books read, then
                     teacher verification count.
                   </div>
                 </div>
@@ -618,7 +617,9 @@ export default function ReadingCompetitionPage() {
                       </span>
                       <div className={styles.winnerMetrics}>
                         <span>{category.winner.booksRead} books read</span>
-                        <span>{category.winner.averageGrade} average grade</span>
+                        <span>
+                          {category.winner.averageGrade} average grade
+                        </span>
                         <span>
                           {category.winner.teacherVerifiedCount} verified
                           summaries
@@ -689,7 +690,9 @@ export default function ReadingCompetitionPage() {
                 >
                   {category.entries.length === 0 ? (
                     <div className={styles.emptyState}>
-                      <p>No ranked readers from this category in the top 75 yet.</p>
+                      <p>
+                        No ranked readers from this category in the top 75 yet.
+                      </p>
                     </div>
                   ) : (
                     <div className={styles.categoryList}>
@@ -793,7 +796,9 @@ export default function ReadingCompetitionPage() {
                           </span>
                         </div>
                         <div className={styles.activityMeta}>
-                          <span>Checked in: {formatDate(record.checkinDate)}</span>
+                          <span>
+                            Checked in: {formatDate(record.checkinDate)}
+                          </span>
                           <span>
                             {record.currentClass || 'Class not set'} -{' '}
                             {record.categoryLabel}
