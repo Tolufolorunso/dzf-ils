@@ -664,23 +664,30 @@ export async function GET(request) {
   try {
     await dbConnect();
 
-    const auth = await verifyAuth(request);
-    if (!auth.status) {
-      return NextResponse.json(
-        { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
-      );
-    }
+    const { searchParams } = new URL(request.url);
+    const isPublicRequest = ['1', 'true', 'yes', 'live'].includes(
+      cleanText(searchParams.get('public')).toLowerCase(),
+    );
 
-    if (!hasCompetitionAccess(auth.user)) {
-      return NextResponse.json(
-        {
-          status: false,
-          message:
-            'Only library staff can view or manage reading competition records.',
-        },
-        { status: StatusCodes.FORBIDDEN },
-      );
+    if (!isPublicRequest) {
+      const auth = await verifyAuth(request);
+      if (!auth.status) {
+        return NextResponse.json(
+          { status: false, message: auth.message, logout: true },
+          { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
+        );
+      }
+
+      if (!hasCompetitionAccess(auth.user)) {
+        return NextResponse.json(
+          {
+            status: false,
+            message:
+              'Only library staff can view or manage reading competition records.',
+          },
+          { status: StatusCodes.FORBIDDEN },
+        );
+      }
     }
 
     const data = await buildCompetitionData();
@@ -688,7 +695,9 @@ export async function GET(request) {
     return NextResponse.json(
       {
         status: true,
-        message: 'Competition data fetched successfully.',
+        message: isPublicRequest
+          ? 'Public competition data fetched successfully.'
+          : 'Competition data fetched successfully.',
         data,
       },
       { status: StatusCodes.OK },
