@@ -11,12 +11,12 @@ import styles from './page.module.css';
 
 const initialCheckoutForm = {
   patronBarcode: '',
-  itemBarcode: '',
+  bookTitle: '',
 };
 
 const initialCheckinForm = {
   patronBarcode: '',
-  itemBarcode: '',
+  bookTitle: '',
   summary: '',
   grade: '',
   feedback: '',
@@ -384,11 +384,11 @@ export default function ReadingCompetitionPage() {
                     required
                   />
                   <Input
-                    label='Book Barcode'
-                    name='itemBarcode'
-                    value={checkoutForm.itemBarcode}
+                    label='Book Name'
+                    name='bookTitle'
+                    value={checkoutForm.bookTitle}
                     onChange={handleCheckoutChange}
-                    placeholder='Scan or enter book barcode'
+                    placeholder='Type the name of the book borrowed'
                     required
                   />
 
@@ -444,11 +444,11 @@ export default function ReadingCompetitionPage() {
                     required
                   />
                   <Input
-                    label='Book Barcode'
-                    name='itemBarcode'
-                    value={checkinForm.itemBarcode}
+                    label='Book Name'
+                    name='bookTitle'
+                    value={checkinForm.bookTitle}
                     onChange={handleCheckinChange}
-                    placeholder='Scan or enter book barcode'
+                    placeholder='Type the name of the book being checked in'
                     required
                   />
                   <TextArea
@@ -574,6 +574,10 @@ export default function ReadingCompetitionPage() {
                 <div className={styles.ruleList}>
                   <div className={styles.ruleItem}>
                     All competition borrowing is logged from this page by staff.
+                  </div>
+                  <div className={styles.ruleItem}>
+                    Staff type the book name for competition checkout and
+                    check-in because these books may not be catalogued yet.
                   </div>
                   <div className={styles.ruleItem}>
                     Competition borrowing has no due date on this page.
@@ -763,9 +767,7 @@ export default function ReadingCompetitionPage() {
                       <div key={record.id} className={styles.activityItem}>
                         <div>
                           <strong>{record.bookTitle}</strong>
-                          <span>
-                            {record.bookBarcode} - {record.patronName}
-                          </span>
+                          <span>{record.patronName}</span>
                         </div>
                         <div className={styles.activityMeta}>
                           <span>Out: {formatDate(record.checkoutDate)}</span>

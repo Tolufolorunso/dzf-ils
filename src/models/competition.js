@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const MODEL_NAME = 'Competition';
+
 const CompetitionSchema = new mongoose.Schema(
   {
     competitionType: {
@@ -44,16 +46,18 @@ const CompetitionSchema = new mongoose.Schema(
     bookId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Cataloging',
-      required: true,
     },
     bookBarcode: {
       type: String,
-      required: true,
       trim: true,
     },
     bookTitle: {
       type: String,
       required: true,
+      trim: true,
+    },
+    bookTitleKey: {
+      type: String,
       trim: true,
     },
     checkoutDate: {
@@ -122,8 +126,22 @@ CompetitionSchema.index(
     },
   }
 );
+CompetitionSchema.index(
+  { competitionType: 1, sessionKey: 1, patronBarcode: 1, bookTitleKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      sessionKey: { $exists: true },
+      patronBarcode: { $exists: true },
+      bookTitleKey: { $exists: true },
+    },
+  }
+);
 CompetitionSchema.index({ competitionType: 1, sessionKey: 1, status: 1 });
 CompetitionSchema.index({ competitionType: 1, sessionKey: 1, patronBarcode: 1 });
 
-export default mongoose.models.Competition ||
-  mongoose.model('Competition', CompetitionSchema);
+if (mongoose.models[MODEL_NAME]) {
+  mongoose.deleteModel(MODEL_NAME);
+}
+
+export default mongoose.model(MODEL_NAME, CompetitionSchema);

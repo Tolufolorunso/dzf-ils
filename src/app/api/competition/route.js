@@ -4,7 +4,6 @@ import { dbConnect } from '@/lib/dbConnect';
 import { verifyAuth } from '@/lib/auth';
 import Competition from '@/models/competition';
 import Patron from '@/models/PatronModel';
-import Cataloging from '@/models/CatalogingModel';
 import Library from '@/models/Library';
 
 const COMPETITION_TYPE = 'reading';
@@ -29,6 +28,25 @@ function slugify(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function getBookTitleKey(value) {
+  return slugify(value);
+}
+
+function getRecordBookKey(record) {
+  return (
+    cleanText(record?.bookTitleKey) ||
+    getBookTitleKey(record?.bookTitle || record?.bookBarcode || '')
+  );
+}
+
+function getRecordBookTitle(record) {
+  return (
+    cleanText(record?.bookTitle) ||
+    cleanText(record?.bookBarcode) ||
+    'Untitled Book'
+  );
 }
 
 function toBoolean(value) {
@@ -201,8 +219,7 @@ async function buildCompetitionData() {
         id: record._id.toString(),
         patronBarcode: record.patronBarcode,
         patronName: record.patronName,
-        bookBarcode: record.bookBarcode,
-        bookTitle: record.bookTitle,
+        bookTitle: getRecordBookTitle(record),
         checkoutDate: record.checkoutDate,
         checkedOutBy: record.checkedOutBy || 'Library Staff',
       });
@@ -236,8 +253,7 @@ async function buildCompetitionData() {
       id: record._id.toString(),
       patronBarcode: record.patronBarcode,
       patronName: record.patronName,
-      bookBarcode: record.bookBarcode,
-      bookTitle: record.bookTitle,
+      bookTitle: getRecordBookTitle(record),
       checkinDate: record.checkinDate,
       grade: record.grade,
       teacherVerified: record.teacherVerified,
@@ -355,14 +371,15 @@ async function buildCompetitionData() {
 
 async function handleCheckout(body, user) {
   const patronBarcode = cleanText(body.patronBarcode);
-  const itemBarcode = cleanText(body.itemBarcode);
+  const bookTitle = cleanText(body.bookTitle);
+  const bookTitleKey = getBookTitleKey(bookTitle);
   const staffName = getStaffName(user);
 
-  if (!patronBarcode || !itemBarcode) {
+  if (!patronBarcode || !bookTitleKey) {
     return NextResponse.json(
       {
         status: false,
-        message: 'Patron barcode and book barcode are required.',
+        message: 'Patron barcode and book name are required.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );
@@ -370,15 +387,15 @@ async function handleCheckout(body, user) {
 
   const session = await getSessionMeta();
 
-  const [patron, book, existingRecord] = await Promise.all([
+  const [patron, patronRecords] = await Promise.all([
     Patron.findOne({ barcode: patronBarcode }),
-    Cataloging.findOne({ barcode: itemBarcode }),
-    Competition.findOne({
+    Competition.find({
       competitionType: COMPETITION_TYPE,
       sessionKey: session.sessionKey,
       patronBarcode,
-      bookBarcode: itemBarcode,
-    }),
+    })
+      .select('bookTitle bookTitleKey bookBarcode status')
+      .lean(),
   ]);
 
   if (!patron) {
@@ -398,12 +415,9 @@ async function handleCheckout(body, user) {
   //   );
   // }
 
-  if (!book) {
-    return NextResponse.json(
-      { status: false, message: 'Book not found.' },
-      { status: StatusCodes.NOT_FOUND },
-    );
-  }
+  const existingRecord = patronRecords.find(
+    (record) => getRecordBookKey(record) === bookTitleKey,
+  );
 
   if (existingRecord) {
     return NextResponse.json(
@@ -416,60 +430,20 @@ async function handleCheckout(body, user) {
     );
   }
 
-  if (patron.hasBorrowedBook) {
+  const activeLoan = patronRecords.find((record) => record.status === 'checked_out');
+
+  if (activeLoan) {
     return NextResponse.json(
       {
         status: false,
         message:
-          'This patron already has a borrowed book. Please check it in before another competition checkout.',
-      },
-      { status: StatusCodes.CONFLICT },
-    );
-  }
-
-  if (book.isCheckedOut) {
-    return NextResponse.json(
-      {
-        status: false,
-        message: 'This book is already checked out to another patron.',
+          `This patron already has "${getRecordBookTitle(activeLoan)}" checked out. Please check it in before another competition checkout.`,
       },
       { status: StatusCodes.CONFLICT },
     );
   }
 
   const checkoutDate = new Date();
-
-  book.patronsCheckedOutHistory.push({
-    checkedOutBy: patron._id,
-    checkedOutAt: checkoutDate,
-    fullname: formatPatronName(patron),
-    contactNumber:
-      patron.phoneNumber ||
-      patron.parentInfo?.parentPhoneNumber ||
-      'No Phone Number',
-    barcode: patron.barcode,
-  });
-  book.isCheckedOut = true;
-
-  patron.hasBorrowedBook = true;
-
-  const hasBorrowedBefore = patron.itemsCheckedOutHistory.some(
-    (item) => item.itemBarcode === book.barcode,
-  );
-
-  if (!hasBorrowedBefore) {
-    patron.itemsCheckedOutHistory.push({
-      itemId: book._id,
-      itemTitle: book.title.mainTitle,
-      itemSubTitle: book.title.subtitle,
-      itemBarcode: book.barcode,
-      checkoutDate,
-      event: true,
-      eventTitle: session.title,
-    });
-  }
-
-  await Promise.all([book.save(), patron.save()]);
 
   try {
     await Competition.create({
@@ -479,13 +453,12 @@ async function handleCheckout(body, user) {
       patronId: patron._id,
       patronBarcode: patron.barcode,
       patronName: formatPatronName(patron),
-      bookId: book._id,
-      bookBarcode: book.barcode,
-      bookTitle: book.title.mainTitle,
+      bookTitle,
+      bookTitleKey,
       checkoutDate,
       checkedOutBy: staffName,
       status: 'checked_out',
-      library: patron.library || book.library || 'AAoJ',
+      library: patron.library || 'AAoJ',
     });
   } catch (error) {
     if (error?.code === 11000) {
@@ -509,8 +482,7 @@ async function handleCheckout(body, user) {
       data: {
         patronName: formatPatronName(patron),
         patronBarcode: patron.barcode,
-        bookTitle: book.title.mainTitle,
-        bookBarcode: book.barcode,
+        bookTitle,
       },
     },
     { status: StatusCodes.CREATED },
@@ -578,18 +550,19 @@ async function handleUpdateClass(body) {
 
 async function handleCheckin(body, user) {
   const patronBarcode = cleanText(body.patronBarcode);
-  const itemBarcode = cleanText(body.itemBarcode);
+  const bookTitle = cleanText(body.bookTitle);
+  const bookTitleKey = getBookTitleKey(bookTitle);
   const summary = cleanText(body.summary);
   const feedback = cleanText(body.feedback);
   const teacherVerified = toBoolean(body.teacherVerified);
   const grade = Number(body.grade);
   const staffName = getStaffName(user);
 
-  if (!patronBarcode || !itemBarcode) {
+  if (!patronBarcode || !bookTitleKey) {
     return NextResponse.json(
       {
         status: false,
-        message: 'Patron barcode and book barcode are required.',
+        message: 'Patron barcode and book name are required.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );
@@ -607,24 +580,25 @@ async function handleCheckin(body, user) {
 
   const session = await getSessionMeta();
 
-  const [patron, book, activeRecord, completedRecord] = await Promise.all([
+  const [patron, patronRecords] = await Promise.all([
     Patron.findOne({ barcode: patronBarcode }),
-    Cataloging.findOne({ barcode: itemBarcode }),
-    Competition.findOne({
+    Competition.find({
       competitionType: COMPETITION_TYPE,
       sessionKey: session.sessionKey,
       patronBarcode,
-      bookBarcode: itemBarcode,
-      status: 'checked_out',
-    }),
-    Competition.findOne({
-      competitionType: COMPETITION_TYPE,
-      sessionKey: session.sessionKey,
-      patronBarcode,
-      bookBarcode: itemBarcode,
-      status: 'checked_in',
-    }),
+    }).sort({ checkoutDate: -1 }),
   ]);
+
+  const activeRecord = patronRecords.find(
+    (record) =>
+      record.status === 'checked_out' &&
+      getRecordBookKey(record) === bookTitleKey,
+  );
+  const completedRecord = patronRecords.find(
+    (record) =>
+      record.status === 'checked_in' &&
+      getRecordBookKey(record) === bookTitleKey,
+  );
 
   if (!patron) {
     return NextResponse.json(
@@ -633,14 +607,7 @@ async function handleCheckin(body, user) {
     );
   }
 
-  if (!book) {
-    return NextResponse.json(
-      { status: false, message: 'Book not found.' },
-      { status: StatusCodes.NOT_FOUND },
-    );
-  }
-
-  if (completedRecord) {
+  if (completedRecord && !activeRecord) {
     return NextResponse.json(
       {
         status: false,
@@ -656,46 +623,18 @@ async function handleCheckin(body, user) {
       {
         status: false,
         message:
-          'No active competition checkout was found for this patron and book.',
+          'No active competition checkout was found for this patron and book title.',
       },
       { status: StatusCodes.NOT_FOUND },
     );
   }
 
-  const latestCheckout = book.patronsCheckedOutHistory?.at(-1);
-
-  if (!book.isCheckedOut) {
-    return NextResponse.json(
-      {
-        status: false,
-        message:
-          'This book is already marked as checked in. Please confirm the circulation record.',
-      },
-      { status: StatusCodes.CONFLICT },
-    );
-  }
-
-  if (latestCheckout?.barcode && latestCheckout.barcode !== patronBarcode) {
-    return NextResponse.json(
-      {
-        status: false,
-        message: 'This book is currently checked out to a different patron.',
-      },
-      { status: StatusCodes.CONFLICT },
-    );
-  }
-
   const checkinDate = new Date();
-  book.isCheckedOut = false;
-
-  if (latestCheckout && !latestCheckout.returnedAt) {
-    latestCheckout.returnedAt = checkinDate;
-  }
-
-  patron.hasBorrowedBook = false;
-
   activeRecord.status = 'checked_in';
   activeRecord.checkinDate = checkinDate;
+  activeRecord.bookTitle = activeRecord.bookTitle || bookTitle;
+  activeRecord.bookTitleKey =
+    activeRecord.bookTitleKey || getBookTitleKey(activeRecord.bookTitle);
   activeRecord.summary = summary;
   activeRecord.grade = grade;
   activeRecord.feedback = feedback;
@@ -703,7 +642,7 @@ async function handleCheckin(body, user) {
   activeRecord.teacherVerifiedBy = teacherVerified ? staffName : '';
   activeRecord.gradedBy = staffName;
 
-  await Promise.all([book.save(), patron.save(), activeRecord.save()]);
+  await activeRecord.save();
 
   return NextResponse.json(
     {
@@ -712,8 +651,7 @@ async function handleCheckin(body, user) {
       data: {
         patronName: formatPatronName(patron),
         patronBarcode: patron.barcode,
-        bookTitle: book.title.mainTitle,
-        bookBarcode: book.barcode,
+        bookTitle: activeRecord.bookTitle,
         grade,
         teacherVerified,
       },
