@@ -105,7 +105,7 @@ export default function ReadingCompetitionLivePage() {
           <h1 className={styles.title}>Track every reader, ranking, and win live.</h1>
           <p className={styles.subtitle}>
             This public board updates from the reading competition records so
-            everyone can follow category winners, grade-first rankings, active
+            everyone can follow category winners, total-grade rankings, active
             books out, and fresh check-ins from one colorful screen.
           </p>
 
@@ -143,8 +143,8 @@ export default function ReadingCompetitionLivePage() {
               <span>Books Read</span>
             </div>
             <div className={styles.metricCard}>
-              <strong>{stats?.averageGrade ?? 0}</strong>
-              <span>Average Grade</span>
+              <strong>{stats?.totalGrade ?? 0}</strong>
+              <span>Total Grade</span>
             </div>
             <div className={styles.metricCard}>
               <strong>{stats?.verifiedSummaries ?? 0}</strong>
@@ -153,7 +153,8 @@ export default function ReadingCompetitionLivePage() {
           </div>
 
           <div className={styles.heroFootnote}>
-            Grade leads the leaderboard. Number of books read follows next.
+            Total grade leads the leaderboard. Number of books read follows
+            next.
           </div>
         </div>
       </section>
@@ -219,8 +220,8 @@ export default function ReadingCompetitionLivePage() {
                       </span>
                       <div className={styles.spotlightStats}>
                         <div>
-                          <strong>{category.winner.averageGrade}</strong>
-                          <span>Grade</span>
+                          <strong>{category.winner.totalGrade}</strong>
+                          <span>Total Grade</span>
                         </div>
                         <div>
                           <strong>{category.winner.booksRead}</strong>
@@ -264,7 +265,7 @@ export default function ReadingCompetitionLivePage() {
                           <div className={styles.rankIdentity}>
                             <strong>{entry.patronName}</strong>
                             <span>
-                              {entry.currentClass || 'Class not set'} •{' '}
+                              {entry.currentClass || 'Class not set'} -{' '}
                               {entry.categoryLabel}
                             </span>
                             <span>{entry.patronBarcode}</span>
@@ -272,8 +273,8 @@ export default function ReadingCompetitionLivePage() {
 
                           <div className={styles.rankStats}>
                             <div>
-                              <strong>{entry.averageGrade}</strong>
-                              <span>Average Grade</span>
+                              <strong>{entry.totalGrade}</strong>
+                              <span>Total Grade</span>
                             </div>
                             <div>
                               <strong>{entry.booksRead}</strong>
@@ -319,8 +320,8 @@ export default function ReadingCompetitionLivePage() {
                                 <span>#{entry.categoryRank}</span>
                                 <strong>{entry.patronName}</strong>
                                 <em>
-                                  {entry.averageGrade} grade • {entry.booksRead}{' '}
-                                  books
+                                  {entry.totalGrade} total grade -{' '}
+                                  {entry.booksRead} books
                                 </em>
                               </div>
                             ))}
@@ -344,8 +345,8 @@ export default function ReadingCompetitionLivePage() {
                               <span>#{entry.categoryRank}</span>
                               <strong>{entry.patronName}</strong>
                               <em>
-                                {entry.averageGrade} grade • {entry.booksRead}{' '}
-                                books
+                                {entry.totalGrade} total grade -{' '}
+                                {entry.booksRead} books
                               </em>
                             </div>
                           ))}
@@ -391,7 +392,7 @@ export default function ReadingCompetitionLivePage() {
                       <div key={record.id} className={styles.activityCard}>
                         <strong>{record.bookTitle}</strong>
                         <span>
-                          {record.patronName} • Grade {record.grade ?? 'N/A'}
+                          {record.patronName} - Grade {record.grade ?? 'N/A'}
                         </span>
                         <div className={styles.activityMeta}>
                           <span>{record.currentClass || 'Class not set'}</span>

@@ -339,12 +339,12 @@ export default function ReadingCompetitionPage() {
                   Completed and checked in with grading
                 </p>
               </Card>
-              <Card title='Average Grade'>
+              <Card title='Total Grade'>
                 <div className={styles.statValue}>
-                  {stats?.averageGrade ?? 0}
+                  {stats?.totalGrade ?? 0}
                 </div>
                 <p className={styles.statLabel}>
-                  Session average across graded summaries
+                  Combined grades awarded this session
                 </p>
               </Card>
               <Card title='Leaderboard Shown'>
@@ -599,7 +599,7 @@ export default function ReadingCompetitionPage() {
                     combined across all categories.
                   </div>
                   <div className={styles.ruleItem}>
-                    Ranking follows average grade first, then books read, then
+                    Ranking follows total grade first, then books read, then
                     teacher verification count.
                   </div>
                 </div>
@@ -620,10 +620,8 @@ export default function ReadingCompetitionPage() {
                         {category.winner.currentClass || 'Class not set'}
                       </span>
                       <div className={styles.winnerMetrics}>
+                        <span>{category.winner.totalGrade} total grade</span>
                         <span>{category.winner.booksRead} books read</span>
-                        <span>
-                          {category.winner.averageGrade} average grade
-                        </span>
                         <span>
                           {category.winner.teacherVerifiedCount} verified
                           summaries
@@ -663,12 +661,12 @@ export default function ReadingCompetitionPage() {
                         </div>
                         <div className={styles.rankMetrics}>
                           <div>
-                            <strong>{entry.booksRead}</strong>
-                            <span>Books Read</span>
+                            <strong>{entry.totalGrade}</strong>
+                            <span>Total Grade</span>
                           </div>
                           <div>
-                            <strong>{entry.averageGrade}</strong>
-                            <span>Average Grade</span>
+                            <strong>{entry.booksRead}</strong>
+                            <span>Books Read</span>
                           </div>
                           <div>
                             <strong>{entry.teacherVerifiedCount}</strong>
@@ -716,8 +714,8 @@ export default function ReadingCompetitionPage() {
                             </span>
                           </div>
                           <div className={styles.categoryStats}>
+                            <span>{entry.totalGrade} total grade</span>
                             <span>{entry.booksRead} books</span>
-                            <span>{entry.averageGrade} grade</span>
                           </div>
                         </div>
                       ))}
@@ -745,8 +743,8 @@ export default function ReadingCompetitionPage() {
                           </span>
                         </div>
                         <div className={styles.categoryStats}>
+                          <span>{entry.totalGrade} total grade</span>
                           <span>{entry.booksRead} books</span>
-                          <span>{entry.averageGrade} grade</span>
                         </div>
                       </div>
                     ))}

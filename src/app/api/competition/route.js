@@ -61,10 +61,6 @@ function toBoolean(value) {
   return false;
 }
 
-function roundToOneDecimal(value) {
-  return Math.round(value * 10) / 10;
-}
-
 function hasCompetitionAccess(user) {
   return ALLOWED_COMPETITION_ROLES.includes(user?.role);
 }
@@ -154,7 +150,7 @@ async function getSessionMeta() {
 function rankLeaderboard(entries) {
   const sorted = [...entries].sort((left, right) => {
     return (
-      right.averageGrade - left.averageGrade ||
+      right.totalGrade - left.totalGrade ||
       right.booksRead - left.booksRead ||
       right.teacherVerifiedCount - left.teacherVerifiedCount ||
       right.latestCheckinTime - left.latestCheckinTime ||
@@ -199,7 +195,6 @@ async function buildCompetitionData() {
         booksLogged: 0,
         totalGrade: 0,
         gradedCount: 0,
-        averageGrade: 0,
         teacherVerifiedCount: 0,
         activeLoans: 0,
         currentClass: '',
@@ -298,14 +293,7 @@ async function buildCompetitionData() {
     record.categoryLabel = classInfo.categoryLabel;
   });
 
-  const leaderboardEntries = Array.from(participantMap.values()).map(
-    (participant) => ({
-      ...participant,
-      averageGrade: participant.gradedCount
-        ? roundToOneDecimal(participant.totalGrade / participant.gradedCount)
-        : 0,
-    }),
-  );
+  const leaderboardEntries = Array.from(participantMap.values());
 
   const rankedLeaderboard = rankLeaderboard(leaderboardEntries);
   const topLeaderboard = rankedLeaderboard.slice(0, LEADERBOARD_LIMIT);
@@ -349,9 +337,7 @@ async function buildCompetitionData() {
       activeCheckouts: activeCheckouts.length,
       gradedSummaries: gradedCount,
       verifiedSummaries,
-      averageGrade: gradedCount
-        ? roundToOneDecimal(totalGrade / gradedCount)
-        : 0,
+      totalGrade,
       leaderboardCount: topLeaderboard.length,
     },
     leaderboard: topLeaderboard,
