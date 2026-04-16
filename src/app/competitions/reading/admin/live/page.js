@@ -102,7 +102,9 @@ export default function ReadingCompetitionLivePage() {
             <span className={styles.liveDot} />
             Reading Competition Live Board
           </div>
-          <h1 className={styles.title}>Track every reader, ranking, and win live.</h1>
+          <h1 className={styles.title}>
+            Track every reader, ranking, and win live.
+          </h1>
           <p className={styles.subtitle}>
             This public board updates from the reading competition records so
             everyone can follow category winners, total-grade rankings, active
@@ -228,7 +230,9 @@ export default function ReadingCompetitionLivePage() {
                           <span>Books</span>
                         </div>
                         <div>
-                          <strong>{category.winner.teacherVerifiedCount}</strong>
+                          <strong>
+                            {category.winner.teacherVerifiedCount}
+                          </strong>
                           <span>Verified</span>
                         </div>
                       </div>
@@ -247,13 +251,17 @@ export default function ReadingCompetitionLivePage() {
                 <Card title='Top 75 Combined Leaderboard'>
                   {leaderboard.length === 0 ? (
                     <div className={styles.emptyState}>
-                      No leaderboard entries yet. Once check-ins are graded,
-                      the live board will fill up here.
+                      No leaderboard entries yet. Once check-ins are graded, the
+                      live board will fill up here.
                     </div>
                   ) : (
                     <div className={styles.leaderboardList}>
                       {leaderboard.map((entry) => (
-                        <div key={entry.patronBarcode} className={styles.rankRow}>
+                        <div
+                          key={entry.patronBarcode}
+                          className={styles.rankRow}
+                        >
+                          {console.log('entry', entry?.currentClass)}
                           <div
                             className={`${styles.rankBadge} ${getLeaderTone(
                               entry.rank,
@@ -300,7 +308,10 @@ export default function ReadingCompetitionLivePage() {
                 <Card title='Category Rankings'>
                   <div className={styles.categoryBoardStack}>
                     {categoryLeaderboards.map((category) => (
-                      <div key={category.categoryKey} className={styles.categoryPanel}>
+                      <div
+                        key={category.categoryKey}
+                        className={styles.categoryPanel}
+                      >
                         <div className={styles.categoryPanelHeader}>
                           <strong>{category.categoryLabel}</strong>
                           <span>{category.entries.length} ranked readers</span>
@@ -317,7 +328,9 @@ export default function ReadingCompetitionLivePage() {
                                 key={`${category.categoryKey}-${entry.patronBarcode}`}
                                 className={styles.categoryMiniRow}
                               >
-                                <span>#{entry.categoryRank}</span>
+                                <span>
+                                  #{entry.categoryRank} • {entry.currentClass}
+                                </span>
                                 <strong>{entry.patronName}</strong>
                                 <em>
                                   {entry.totalGrade} total grade -{' '}
@@ -342,7 +355,9 @@ export default function ReadingCompetitionLivePage() {
                               key={`uncategorized-${entry.patronBarcode}`}
                               className={styles.categoryMiniRow}
                             >
-                              <span>#{entry.categoryRank}</span>
+                              <span>
+                                #{entry.categoryRank} • {entry.currentClass}
+                              </span>
                               <strong>{entry.patronName}</strong>
                               <em>
                                 {entry.totalGrade} total grade -{' '}
@@ -397,7 +412,9 @@ export default function ReadingCompetitionLivePage() {
                         <div className={styles.activityMeta}>
                           <span>{record.currentClass || 'Class not set'}</span>
                           <span>{record.categoryLabel}</span>
-                          <span>Checked in {formatDate(record.checkinDate)}</span>
+                          <span>
+                            Checked in {formatDate(record.checkinDate)}
+                          </span>
                         </div>
                       </div>
                     ))}

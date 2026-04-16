@@ -65,14 +65,14 @@ export default function PatronsPage() {
         (patron) =>
           patron.surname?.toLowerCase().includes(searchTerm) ||
           patron.firstname?.toLowerCase().includes(searchTerm) ||
-          patron.barcode?.toLowerCase().includes(searchTerm)
+          patron.barcode?.toLowerCase().includes(searchTerm),
       );
     }
 
     // Patron type filter
     if (filters.patronType) {
       filtered = filtered.filter(
-        (patron) => patron.patronType === filters.patronType
+        (patron) => patron.patronType === filters.patronType,
       );
     }
 
@@ -136,6 +136,7 @@ export default function PatronsPage() {
     { key: 'patronType', label: 'Type' },
     { key: 'gender', label: 'Gender' },
     { key: 'status', label: 'Status' },
+    { key: 'activation', label: 'Activation' },
     { key: 'points', label: 'Points' },
     { key: 'actions', label: 'Actions' },
   ];

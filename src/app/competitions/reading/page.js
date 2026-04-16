@@ -340,9 +340,7 @@ export default function ReadingCompetitionPage() {
                 </p>
               </Card>
               <Card title='Total Grade'>
-                <div className={styles.statValue}>
-                  {stats?.totalGrade ?? 0}
-                </div>
+                <div className={styles.statValue}>{stats?.totalGrade ?? 0}</div>
                 <p className={styles.statLabel}>
                   Combined grades awarded this session
                 </p>
@@ -606,7 +604,7 @@ export default function ReadingCompetitionPage() {
               </Card>
             </section>
 
-            <section className={styles.winnersGrid}>
+            {/* <section className={styles.winnersGrid}>
               {categoryWinners.map((category) => (
                 <Card
                   key={category.categoryKey}
@@ -814,7 +812,7 @@ export default function ReadingCompetitionPage() {
                   </div>
                 )}
               </Card>
-            </section>
+            </section> */}
           </>
         )}
       </main>
