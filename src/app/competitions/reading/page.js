@@ -585,6 +585,10 @@ export default function ReadingCompetitionPage() {
                     feedback are optional.
                   </div>
                   <div className={styles.ruleItem}>
+                    Each patron can only complete 2 competition check-ins per
+                    day.
+                  </div>
+                  <div className={styles.ruleItem}>
                     Staff can update a patron&apos;s current class here so the
                     student appears in the right category.
                   </div>

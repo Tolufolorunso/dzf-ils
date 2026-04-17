@@ -9,6 +9,8 @@ import Library from '@/models/Library';
 const COMPETITION_TYPE = 'reading';
 const ALLOWED_COMPETITION_ROLES = ['admin', 'asst_admin', 'ict', 'librarian'];
 const LEADERBOARD_LIMIT = 75;
+const CHECKIN_DAILY_LIMIT = 2;
+const COMPETITION_TIMEZONE = 'Africa/Lagos';
 const CATEGORY_ORDER = [
   { key: 'senior_secondary', label: 'Senior Secondary' },
   { key: 'junior_secondary', label: 'Junior Secondary' },
@@ -47,6 +49,32 @@ function getRecordBookTitle(record) {
     cleanText(record?.bookBarcode) ||
     'Untitled Book'
   );
+}
+
+function getTimezoneDateKey(value, timeZone = COMPETITION_TIMEZONE) {
+  if (!value) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value));
+}
+
+function formatTimezoneDate(value, timeZone = COMPETITION_TIMEZONE) {
+  if (!value) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('en-NG', {
+    timeZone,
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date(value));
 }
 
 function toBoolean(value) {
@@ -616,6 +644,23 @@ async function handleCheckin(body, user) {
   }
 
   const checkinDate = new Date();
+  const checkinDateKey = getTimezoneDateKey(checkinDate);
+  const completedTodayCount = patronRecords.filter(
+    (record) =>
+      record.status === 'checked_in' &&
+      getTimezoneDateKey(record.checkinDate) === checkinDateKey,
+  ).length;
+
+  if (completedTodayCount >= CHECKIN_DAILY_LIMIT) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: `This patron has already completed ${CHECKIN_DAILY_LIMIT} competition check-ins on ${formatTimezoneDate(checkinDate)}. Please try again tomorrow.`,
+      },
+      { status: StatusCodes.CONFLICT },
+    );
+  }
+
   activeRecord.status = 'checked_in';
   activeRecord.checkinDate = checkinDate;
   activeRecord.bookTitle = activeRecord.bookTitle || bookTitle;
