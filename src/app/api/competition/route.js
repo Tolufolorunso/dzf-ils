@@ -587,7 +587,7 @@ async function handleCheckin(body, user) {
     return NextResponse.json(
       {
         status: false,
-        message: 'Grade must be a number between 0 and 20.',
+        message: 'Grade must be a number between 1 and 20.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );
