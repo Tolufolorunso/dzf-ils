@@ -461,11 +461,11 @@ export default function ReadingCompetitionPage() {
                     label='Grade'
                     name='grade'
                     type='number'
-                    min='0'
-                    max='100'
+                    min='1'
+                    max='20'
                     value={checkinForm.grade}
                     onChange={handleCheckinChange}
-                    placeholder='0 - 100'
+                    placeholder='1 - 20'
                     required
                   />
                   <Select

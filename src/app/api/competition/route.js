@@ -444,14 +444,15 @@ async function handleCheckout(body, user) {
     );
   }
 
-  const activeLoan = patronRecords.find((record) => record.status === 'checked_out');
+  const activeLoan = patronRecords.find(
+    (record) => record.status === 'checked_out',
+  );
 
   if (activeLoan) {
     return NextResponse.json(
       {
         status: false,
-        message:
-          `This patron already has "${getRecordBookTitle(activeLoan)}" checked out. Please check it in before another competition checkout.`,
+        message: `This patron already has "${getRecordBookTitle(activeLoan)}" checked out. Please check it in before another competition checkout.`,
       },
       { status: StatusCodes.CONFLICT },
     );
@@ -582,11 +583,11 @@ async function handleCheckin(body, user) {
     );
   }
 
-  if (!Number.isFinite(grade) || grade < 0 || grade > 100) {
+  if (!Number.isFinite(grade) || grade < 1 || grade > 20) {
     return NextResponse.json(
       {
         status: false,
-        message: 'Grade must be a number between 0 and 100.',
+        message: 'Grade must be a number between 0 and 20.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );
