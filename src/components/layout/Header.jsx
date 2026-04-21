@@ -73,6 +73,11 @@ export default function Header() {
             <Link href='/dashboard' className={styles.navLink}>
               Dashboard
             </Link>
+            {!loading && user?.role === 'admin' && (
+              <Link href='/admin' className={styles.navLink}>
+                Admin
+              </Link>
+            )}
             <div className={styles.dropdown}>
               <button className={styles.dropdownButton}>
                 Catalogs <span className={styles.dropdownArrow}>▼</span>

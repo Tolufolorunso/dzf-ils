@@ -11,6 +11,12 @@ const ALLOWED_COMPETITION_ROLES = ['admin', 'asst_admin', 'ict', 'librarian'];
 const LEADERBOARD_LIMIT = 75;
 const CHECKIN_DAILY_LIMIT = 2;
 const COMPETITION_TIMEZONE = 'Africa/Lagos';
+const RESULT_CATEGORY_ORDER = [
+  { key: 'senior_secondary', label: 'SS1 - SS3' },
+  { key: 'junior_secondary', label: 'JSS1 - JSS3' },
+  { key: 'primary_upper', label: 'Primary 4 - 6' },
+  { key: 'primary_lower', label: 'Primary 1 - 3' },
+];
 const CATEGORY_ORDER = [
   { key: 'senior_secondary', label: 'Senior Secondary' },
   { key: 'junior_secondary', label: 'Junior Secondary' },
@@ -93,6 +99,10 @@ function hasCompetitionAccess(user) {
   return ALLOWED_COMPETITION_ROLES.includes(user?.role);
 }
 
+function hasResultAdminAccess(user) {
+  return user?.role === 'admin';
+}
+
 function formatPatronName(patron) {
   return `${patron.surname}, ${patron.firstname} ${patron.middlename || ''}`.trim();
 }
@@ -141,6 +151,74 @@ function getClassInfo(value) {
     currentClass: rawValue,
     categoryKey: 'uncategorized',
     categoryLabel: 'Uncategorized',
+  };
+}
+
+function getResultCategoryInfo(value) {
+  const rawValue = cleanText(value);
+  const normalized = normalizeClassValue(value);
+
+  if (/^(ss|sss)[123]$/.test(normalized)) {
+    return {
+      currentClass: rawValue || `SS${normalized.slice(-1)}`,
+      categoryKey: 'senior_secondary',
+      categoryLabel: 'SS1 - SS3',
+    };
+  }
+
+  if (/^(js|jss)[123]$/.test(normalized)) {
+    return {
+      currentClass: rawValue || `JSS${normalized.slice(-1)}`,
+      categoryKey: 'junior_secondary',
+      categoryLabel: 'JSS1 - JSS3',
+    };
+  }
+
+  if (/^(primary|pri|p)[456]$/.test(normalized)) {
+    return {
+      currentClass: rawValue || `Primary ${normalized.slice(-1)}`,
+      categoryKey: 'primary_upper',
+      categoryLabel: 'Primary 4 - 6',
+    };
+  }
+
+  if (/^(primary|pri|p)[123]$/.test(normalized)) {
+    return {
+      currentClass: rawValue || `Primary ${normalized.slice(-1)}`,
+      categoryKey: 'primary_lower',
+      categoryLabel: 'Primary 1 - 3',
+    };
+  }
+
+  return {
+    currentClass: rawValue,
+    categoryKey: 'uncategorized',
+    categoryLabel: 'Uncategorized',
+  };
+}
+
+async function findCompetitionLibrary(baseQuery = {}) {
+  const activeLibrary = await Library.findOne({
+    'competitionDetails.isActive': true,
+    ...baseQuery,
+  });
+
+  if (activeLibrary) {
+    return activeLibrary;
+  }
+
+  return Library.findOne(baseQuery).sort({ _id: 1 });
+}
+
+async function getResultPublicationState() {
+  const library = await findCompetitionLibrary();
+
+  const readingResult = library?.competitionDetails?.results?.reading;
+
+  return {
+    isPublished: Boolean(readingResult?.isPublished),
+    publishedAt: readingResult?.publishedAt || null,
+    publishedBy: cleanText(readingResult?.publishedBy),
   };
 }
 
@@ -194,6 +272,7 @@ function rankLeaderboard(entries) {
 
 async function buildCompetitionData() {
   const session = await getSessionMeta();
+  const resultPublication = await getResultPublicationState();
 
   const records = await Competition.find({
     competitionType: COMPETITION_TYPE,
@@ -228,6 +307,8 @@ async function buildCompetitionData() {
         currentClass: '',
         categoryKey: 'uncategorized',
         categoryLabel: 'Uncategorized',
+        resultCategoryKey: 'uncategorized',
+        resultCategoryLabel: 'Uncategorized',
         latestCheckinTime: 0,
         latestCheckinDate: null,
       });
@@ -302,9 +383,12 @@ async function buildCompetitionData() {
 
   participantMap.forEach((participant, barcode) => {
     const classInfo = patronClassMap.get(barcode) || getClassInfo('');
+    const resultCategoryInfo = getResultCategoryInfo(classInfo.currentClass);
     participant.currentClass = classInfo.currentClass;
     participant.categoryKey = classInfo.categoryKey;
     participant.categoryLabel = classInfo.categoryLabel;
+    participant.resultCategoryKey = resultCategoryInfo.categoryKey;
+    participant.resultCategoryLabel = resultCategoryInfo.categoryLabel;
   });
 
   activeCheckouts.forEach((record) => {
@@ -356,8 +440,40 @@ async function buildCompetitionData() {
       categoryRank: index + 1,
     }));
 
+  const resultCategoryWinners = RESULT_CATEGORY_ORDER.map((category) => ({
+    categoryKey: category.key,
+    categoryLabel: category.label,
+    winner:
+      rankedLeaderboard.find(
+        (entry) => entry.resultCategoryKey === category.key,
+      ) || null,
+  }));
+
+  const resultCategoryLeaderboards = RESULT_CATEGORY_ORDER.map((category) => {
+    const entries = rankedLeaderboard
+      .filter((entry) => entry.resultCategoryKey === category.key)
+      .map((entry, index) => ({
+        ...entry,
+        categoryRank: index + 1,
+      }));
+
+    return {
+      categoryKey: category.key,
+      categoryLabel: category.label,
+      entries,
+    };
+  });
+
+  const resultUncategorizedLeaderboard = rankedLeaderboard
+    .filter((entry) => entry.resultCategoryKey === 'uncategorized')
+    .map((entry, index) => ({
+      ...entry,
+      categoryRank: index + 1,
+    }));
+
   return {
     session,
+    resultPublication,
     stats: {
       totalParticipants: participantMap.size,
       totalBooksLogged: records.length,
@@ -372,6 +488,9 @@ async function buildCompetitionData() {
     categoryWinners,
     categoryLeaderboards,
     uncategorizedLeaderboard: uncategorizedEntries,
+    resultCategoryWinners,
+    resultCategoryLeaderboards,
+    resultUncategorizedLeaderboard,
     activeCheckouts: activeCheckouts.slice(0, 10),
     recentCheckins: recentCheckins
       .sort(
@@ -692,14 +811,111 @@ async function handleCheckin(body, user) {
   );
 }
 
+async function handleResultPublicationUpdate(body, user) {
+  if (!hasResultAdminAccess(user)) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: 'Only admin can publish or hide competition results.',
+      },
+      { status: StatusCodes.FORBIDDEN },
+    );
+  }
+
+  const shouldPublish = toBoolean(body.isPublished);
+  const library = await findCompetitionLibrary();
+
+  if (!library) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: 'No library configuration was found for competition settings.',
+      },
+      { status: StatusCodes.NOT_FOUND },
+    );
+  }
+
+  if (!library.competitionDetails) {
+    library.competitionDetails = {};
+  }
+
+  if (!library.competitionDetails.results) {
+    library.competitionDetails.results = {};
+  }
+
+  if (!library.competitionDetails.results.reading) {
+    library.competitionDetails.results.reading = {};
+  }
+
+  library.competitionDetails.results.reading.isPublished = shouldPublish;
+  library.competitionDetails.results.reading.publishedAt = shouldPublish
+    ? new Date()
+    : null;
+  library.competitionDetails.results.reading.publishedBy = shouldPublish
+    ? getStaffName(user)
+    : '';
+
+  await library.save();
+
+  return NextResponse.json(
+    {
+      status: true,
+      message: shouldPublish
+        ? 'Reading competition results are now visible.'
+        : 'Reading competition results are now hidden.',
+      data: {
+        isPublished: library.competitionDetails.results.reading.isPublished,
+        publishedAt: library.competitionDetails.results.reading.publishedAt,
+        publishedBy: library.competitionDetails.results.reading.publishedBy,
+      },
+    },
+    { status: StatusCodes.OK },
+  );
+}
+
 export async function GET(request) {
   try {
     await dbConnect();
 
     const { searchParams } = new URL(request.url);
-    const isPublicRequest = ['1', 'true', 'yes', 'live'].includes(
-      cleanText(searchParams.get('public')).toLowerCase(),
+    const publicMode = cleanText(searchParams.get('public')).toLowerCase();
+    const isPublicRequest = ['1', 'true', 'yes', 'live', 'result'].includes(
+      publicMode,
     );
+
+    if (publicMode === 'result') {
+      const session = await getSessionMeta();
+      const resultPublication = await getResultPublicationState();
+
+      if (!resultPublication.isPublished) {
+        return NextResponse.json(
+          {
+            status: true,
+            message: 'Reading competition result is not published yet.',
+            data: {
+              resultReady: false,
+              session,
+              resultPublication,
+            },
+          },
+          { status: StatusCodes.OK },
+        );
+      }
+
+      const data = await buildCompetitionData();
+
+      return NextResponse.json(
+        {
+          status: true,
+          message: 'Public competition result fetched successfully.',
+          data: {
+            ...data,
+            resultReady: true,
+          },
+        },
+        { status: StatusCodes.OK },
+      );
+    }
 
     if (!isPublicRequest) {
       const auth = await verifyAuth(request);
@@ -786,11 +1002,15 @@ export async function POST(request) {
       return handleUpdateClass(body);
     }
 
+    if (action === 'setresultpublication') {
+      return handleResultPublicationUpdate(body, auth.user);
+    }
+
     return NextResponse.json(
       {
         status: false,
         message:
-          'Invalid competition action. Use checkout, checkin, or updateclass.',
+          'Invalid competition action. Use checkout, checkin, updateclass, or setresultpublication.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );
