@@ -501,11 +501,13 @@ export default function ReadingCompetitionPage() {
                       type='button'
                       variant='secondary'
                       onClick={() => {
-                        setCheckinForm(initialCheckinForm);
+                        // setCheckinForm(initialCheckinForm);
                         setCheckinError('');
                         setCheckinSuccess('');
                       }}
-                      disabled={checkinLoading}
+                      // disabled={checkinLoading}
+
+                      disabled={false}
                     >
                       Clear
                     </Button>
