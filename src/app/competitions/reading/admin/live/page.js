@@ -198,7 +198,7 @@ export default function ReadingCompetitionLivePage() {
               </div>
             </section>
 
-            <section className={styles.winnersSection}>
+            {/* <section className={styles.winnersSection}>
               {categoryWinners.map((category, index) => (
                 <div
                   key={category.categoryKey}
@@ -244,7 +244,7 @@ export default function ReadingCompetitionLivePage() {
                   )}
                 </div>
               ))}
-            </section>
+            </section> */}
 
             <section className={styles.boardLayout}>
               <div className={styles.mainBoard}>
