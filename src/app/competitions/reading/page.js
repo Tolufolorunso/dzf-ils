@@ -610,7 +610,7 @@ export default function ReadingCompetitionPage() {
               </Card>
             </section>
 
-            {/* <section className={styles.winnersGrid}>
+            <section className={styles.winnersGrid}>
               {categoryWinners.map((category) => (
                 <Card
                   key={category.categoryKey}
@@ -818,7 +818,7 @@ export default function ReadingCompetitionPage() {
                   </div>
                 )}
               </Card>
-            </section> */}
+            </section> 
           </>
         )}
       </main>
