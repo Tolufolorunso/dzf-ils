@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './style.module.css';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -9,9 +9,14 @@ export default function Table({
   data = [],
   sortable = true,
   rowsPerPage = 10,
+  showPagination = true,
 }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [data, rowsPerPage]);
 
   const sortedData = (() => {
     if (!sortConfig.key) return data;
@@ -24,9 +29,11 @@ export default function Table({
     });
   })();
 
+  const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
   const startIndex = (page - 1) * rowsPerPage;
-  const paginatedData = sortedData.slice(startIndex, startIndex + rowsPerPage);
-  const totalPages = Math.ceil(data.length / rowsPerPage);
+  const paginatedData = showPagination
+    ? sortedData.slice(startIndex, startIndex + rowsPerPage)
+    : sortedData;
 
   const handleSort = (key) => {
     if (!sortable) return;
@@ -80,24 +87,25 @@ export default function Table({
         </tbody>
       </table>
 
-      {/* Pagination */}
-      <div className={styles.pagination}>
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-        >
-          Prev
-        </button>
-        <span>
-          Page {page} of {totalPages}
-        </span>
-        <button
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-        >
-          Next
-        </button>
-      </div>
+      {showPagination && (
+        <div className={styles.pagination}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Prev
+          </button>
+          <span>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -40,7 +40,7 @@ const CatalogingSchema = new mongoose.Schema(
     },
     ISBN: {
       type: String,
-      required: true,
+      default: '',
     },
     classification: {
       type: String,

@@ -1,13 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Card from '@/components/ui/Card';
+import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  Edit,
+  Hash,
+  Library,
+  Trash2,
+} from 'lucide-react';
 import Button from '@/components/ui/button';
 import Badge from '@/components/ui/Badge';
 import Alert from '@/components/ui/Alert';
+import Input from '@/components/ui/Input';
 import styles from '../catalog.module.css';
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString();
+};
+
+const formatArray = (value) => {
+  if (!value || value.length === 0) return 'N/A';
+  return Array.isArray(value) ? value.join(', ') : value;
+};
+
+const DetailItem = ({ label, children, wide = false }) => (
+  <div className={`${styles.infoItem} ${wide ? styles.infoItemWide : ''}`}>
+    <label>{label}</label>
+    <span>{children || 'N/A'}</span>
+  </div>
+);
 
 export default function CatalogDetailPage() {
   const params = useParams();
@@ -20,17 +46,11 @@ export default function CatalogDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
-  useEffect(() => {
-    if (params.barcode) {
-      fetchItem();
-    }
-  }, [params.barcode]);
-
-  const fetchItem = async () => {
+  const fetchItem = useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
       const decodedBarcode = decodeURIComponent(params.barcode);
-      console.log('Fetching item with barcode:', decodedBarcode);
       const response = await fetch(
         `/api/catalogs/${encodeURIComponent(decodedBarcode)}`
       );
@@ -47,23 +67,22 @@ export default function CatalogDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.barcode]);
 
-  const getAvailabilityBadge = (item) => {
-    if (item.isCheckedOut) {
-      return <Badge variant='warningBadge'>Checked Out</Badge>;
+  useEffect(() => {
+    if (params.barcode) {
+      fetchItem();
     }
-    return <Badge variant='successBadge'>Available</Badge>;
-  };
+  }, [fetchItem, params.barcode]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatArray = (arr) => {
-    if (!arr || arr.length === 0) return 'N/A';
-    return Array.isArray(arr) ? arr.join(', ') : arr;
+  const getAvailabilityBadge = () => {
+    if (item?.isCheckedOut) {
+      return <Badge variant='warningBadge' label='Checked Out' />;
+    }
+    if (item?.isOnHold) {
+      return <Badge variant='info' label='On Hold' />;
+    }
+    return <Badge variant='successBadge' label='Available' />;
   };
 
   const handleDelete = async () => {
@@ -81,18 +100,13 @@ export default function CatalogDetailPage() {
 
       const response = await fetch(
         `/api/catalogs/${encodeURIComponent(item.barcode)}`,
-        {
-          method: 'DELETE',
-        }
+        { method: 'DELETE' }
       );
-
       const data = await response.json();
 
       if (data.status) {
         setSuccess('Catalog item deleted successfully. Redirecting...');
-        setTimeout(() => {
-          router.push('/catalog');
-        }, 2000);
+        setTimeout(() => router.push('/catalog'), 1200);
       } else {
         setError(data.message || 'Failed to delete catalog item');
       }
@@ -155,26 +169,39 @@ export default function CatalogDetailPage() {
 
   return (
     <div className={styles.pageContainer}>
-      <div className={styles.pageHeader}>
-        <div className={styles.headerContent}>
+      <div className={styles.detailHero}>
+        <div className={styles.detailHeroMain}>
+          <p className={styles.overline}>Catalog item</p>
           <h1 className={styles.pageTitle}>{item.title?.mainTitle || 'N/A'}</h1>
           {item.title?.subtitle && (
             <p className={styles.pageSubtitle}>{item.title.subtitle}</p>
           )}
+          <div className={styles.detailHeroMeta}>
+            {getAvailabilityBadge()}
+            <span>{item.author?.mainAuthor || 'Unknown author'}</span>
+            <span>{item.publicationInfo?.year || 'No year'}</span>
+          </div>
         </div>
         <div className={styles.headerActions}>
           <Link href='/catalog'>
-            <Button variant='secondary'>← Back to Catalog</Button>
+            <Button variant='secondary'>
+              <ArrowLeft size={16} aria-hidden='true' />
+              Back
+            </Button>
           </Link>
-          <Link href={`/catalog/${item.barcode}/edit`}>
-            <Button variant='primary'>Edit Item</Button>
+          <Link href={`/catalog/${encodeURIComponent(item.barcode)}/edit`}>
+            <Button variant='primary'>
+              <Edit size={16} aria-hidden='true' />
+              Edit
+            </Button>
           </Link>
           <Button
             variant='danger'
             onClick={openDeleteConfirm}
             disabled={deleting || item.isCheckedOut}
           >
-            🗑️ Delete Item
+            <Trash2 size={16} aria-hidden='true' />
+            Delete
           </Button>
         </div>
       </div>
@@ -184,197 +211,143 @@ export default function CatalogDetailPage() {
       )}
       {success && <Alert type='success' message={success} />}
 
+      <section className={styles.detailStats} aria-label='Item summary'>
+        <div className={styles.statCard}>
+          <BookOpen size={18} aria-hidden='true' />
+          <div>
+            <span>Classification</span>
+            <strong>{item.classification || 'N/A'}</strong>
+          </div>
+        </div>
+        <div className={styles.statCard}>
+          <Hash size={18} aria-hidden='true' />
+          <div>
+            <span>Barcode</span>
+            <strong>{item.barcode}</strong>
+          </div>
+        </div>
+        <div className={styles.statCard}>
+          <Library size={18} aria-hidden='true' />
+          <div>
+            <span>Library</span>
+            <strong>{item.library || 'N/A'}</strong>
+          </div>
+        </div>
+        <div className={styles.statCard}>
+          <Calendar size={18} aria-hidden='true' />
+          <div>
+            <span>Updated</span>
+            <strong>{formatDate(item.updatedAt)}</strong>
+          </div>
+        </div>
+      </section>
+
       <div className={styles.detailGrid}>
-        {/* Basic Information */}
-        <Card title='Basic Information'>
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <label>Title:</label>
-              <span>{item.title?.mainTitle || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Subtitle:</label>
-              <span>{item.title?.subtitle || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Main Author:</label>
-              <span>{item.author?.mainAuthor || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Additional Authors:</label>
-              <span>{formatArray(item.author?.additionalAuthors)}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Classification:</label>
-              <span>{item.classification || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Language:</label>
-              <span>{item.language || 'N/A'}</span>
-            </div>
+        <section className={styles.detailPanel}>
+          <div className={styles.sectionHeader}>
+            <h2>Book details</h2>
+            <p>Title, authorship, and publication information.</p>
           </div>
-        </Card>
-
-        {/* Publication Information */}
-        <Card title='Publication Information'>
           <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <label>Publisher:</label>
-              <span>{item.publicationInfo?.publisher || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Place:</label>
-              <span>{item.publicationInfo?.place || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Year:</label>
-              <span>{item.publicationInfo?.year || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>ISBN:</label>
-              <span>{item.ISBN || 'N/A'}</span>
-            </div>
+            <DetailItem label='Title'>{item.title?.mainTitle}</DetailItem>
+            <DetailItem label='Subtitle'>{item.title?.subtitle}</DetailItem>
+            <DetailItem label='Main author'>{item.author?.mainAuthor}</DetailItem>
+            <DetailItem label='Additional authors'>
+              {formatArray(item.author?.additionalAuthors)}
+            </DetailItem>
+            <DetailItem label='Publisher'>
+              {item.publicationInfo?.publisher}
+            </DetailItem>
+            <DetailItem label='Place'>{item.publicationInfo?.place}</DetailItem>
+            <DetailItem label='Year'>{item.publicationInfo?.year}</DetailItem>
+            <DetailItem label='ISBN'>{item.ISBN}</DetailItem>
           </div>
-        </Card>
+        </section>
 
-        {/* Item Details */}
-        <Card title='Item Details'>
+        <section className={styles.detailPanel}>
+          <div className={styles.sectionHeader}>
+            <h2>Catalog codes</h2>
+            <p>Identifiers and shelf information.</p>
+          </div>
           <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <label>Barcode:</label>
-              <span>
-                <code className={styles.barcode}>{item.barcode}</code>
-              </span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Control Number:</label>
-              <span>
-                <code className={styles.barcode}>{item.controlNumber}</code>
-              </span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Library:</label>
-              <span>{item.library || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Availability:</label>
-              <span>{getAvailabilityBadge(item)}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Holdings Information:</label>
-              <span>{item.holdingsInformation || 'N/A'}</span>
-            </div>
+            <DetailItem label='Barcode'>
+              <code className={styles.barcode}>{item.barcode}</code>
+            </DetailItem>
+            <DetailItem label='Control number'>
+              <code className={styles.barcode}>{item.controlNumber}</code>
+            </DetailItem>
+            <DetailItem label='Language'>{item.language}</DetailItem>
+            <DetailItem label='Copies'>{item.holdingsInformation}</DetailItem>
+            <DetailItem label='Availability'>{getAvailabilityBadge()}</DetailItem>
+            <DetailItem label='Created'>{formatDate(item.createdAt)}</DetailItem>
           </div>
-        </Card>
+        </section>
 
-        {/* Additional Information */}
-        <Card title='Additional Information'>
+        <section className={`${styles.detailPanel} ${styles.detailPanelWide}`}>
+          <div className={styles.sectionHeader}>
+            <h2>Discovery notes</h2>
+            <p>Subject terms, physical notes, and summary.</p>
+          </div>
           <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <label>Index Terms/Genre:</label>
-              <span>{formatArray(item.indexTermGenre)}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Physical Description:</label>
-              <span>{item.physicalDescription || 'N/A'}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <label>Information Summary:</label>
-              <span>{item.informationSummary || 'N/A'}</span>
-            </div>
+            <DetailItem label='Subjects / genre'>
+              {formatArray(item.indexTermGenre)}
+            </DetailItem>
+            <DetailItem label='Physical description'>
+              {item.physicalDescription}
+            </DetailItem>
+            <DetailItem label='Summary / notes' wide>
+              {item.informationSummary}
+            </DetailItem>
           </div>
-        </Card>
+        </section>
 
-        {/* System Information */}
-        <Card title='System Information'>
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <label>Created:</label>
-              <span>{formatDate(item.createdAt)}</span>
+        {item.patronsCheckedOutHistory?.length > 0 && (
+          <section className={`${styles.detailPanel} ${styles.detailPanelWide}`}>
+            <div className={styles.sectionHeader}>
+              <h2>Checkout history</h2>
+              <p>Previous circulation records for this item.</p>
             </div>
-            <div className={styles.infoItem}>
-              <label>Last Updated:</label>
-              <span>{formatDate(item.updatedAt)}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Checkout History */}
-        {item.patronsCheckedOutHistory &&
-          item.patronsCheckedOutHistory.length > 0 && (
-            <Card title='Checkout History'>
-              <div className={styles.historyList}>
-                {item.patronsCheckedOutHistory.map((checkout, index) => (
-                  <div key={index} className={styles.historyItem}>
-                    <div className={styles.historyItemHeader}>
-                      <strong>{checkout.fullname || 'N/A'}</strong>
-                      <Badge variant='info'>{checkout.barcode}</Badge>
-                    </div>
-                    <div className={styles.historyItemDetails}>
-                      <span>
-                        Checked out: {formatDate(checkout.checkedOutAt)}
-                      </span>
-                      <span>Due: {formatDate(checkout.dueDate)}</span>
-                      <span>Contact: {checkout.contactNumber || 'N/A'}</span>
-                    </div>
+            <div className={styles.historyList}>
+              {item.patronsCheckedOutHistory.map((checkout, index) => (
+                <div key={`${checkout.barcode}-${index}`} className={styles.historyItem}>
+                  <div className={styles.historyItemHeader}>
+                    <strong>{checkout.fullname || 'N/A'}</strong>
+                    <Badge variant='info' label={checkout.barcode || 'N/A'} />
                   </div>
-                ))}
-              </div>
-            </Card>
-          )}
+                  <div className={styles.historyItemDetails}>
+                    <span>Checked out: {formatDate(checkout.checkedOutAt)}</span>
+                    <span>Due: {formatDate(checkout.dueDate)}</span>
+                    <span>Contact: {checkout.contactNumber || 'N/A'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className={styles.cropperModal}>
-          <div className={styles.cropperContent}>
-            <h3 style={{ color: '#dc2626', marginBottom: '1rem' }}>
-              ⚠️ Delete Catalog Item
-            </h3>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <p style={{ marginBottom: '1rem', color: '#374151' }}>
-                <strong>WARNING:</strong> This action cannot be undone. The
-                catalog item will be permanently removed from the system.
-              </p>
-              <div
-                style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '0.5rem',
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                }}
-              >
-                <p style={{ margin: 0, fontSize: '0.9rem', color: '#991b1b' }}>
-                  <strong>Item Details:</strong>
-                  <br />
-                  Title: {item.title?.mainTitle}
-                  <br />
-                  Barcode: {item.barcode}
-                  <br />
-                  Control Number: {item.controlNumber}
-                </p>
-              </div>
-              <p style={{ marginBottom: '1rem', color: '#374151' }}>
-                To confirm deletion, please type:{' '}
-                <strong>DELETE {item.barcode}</strong>
-              </p>
-              <input
-                type='text'
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder={`Type "DELETE ${item.barcode}" to confirm`}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '0.375rem',
-                  fontSize: '0.9rem',
-                  fontFamily: 'monospace',
-                }}
-                disabled={deleting}
-              />
+        <div className={styles.cropperModal} role='dialog' aria-modal='true'>
+          <div className={styles.deleteDialog}>
+            <div className={styles.sectionHeader}>
+              <h2>Delete catalog item</h2>
+              <p>This action cannot be undone.</p>
             </div>
+            <div className={styles.deleteSummary}>
+              <strong>{item.title?.mainTitle}</strong>
+              <span>Barcode: {item.barcode}</span>
+              <span>Control number: {item.controlNumber}</span>
+            </div>
+            <p className={styles.deleteInstruction}>
+              To confirm deletion, type <strong>DELETE {item.barcode}</strong>.
+            </p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder={`Type "DELETE ${item.barcode}" to confirm`}
+              disabled={deleting}
+              autoFocus
+            />
             <div className={styles.cropperActions}>
               <Button
                 variant='secondary'

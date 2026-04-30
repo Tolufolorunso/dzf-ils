@@ -1,14 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import Badge from '@/components/ui/Badge';
 import Alert from '@/components/ui/Alert';
 import Table from '@/components/ui/Table';
 import styles from './catalog.module.css';
+
+const pageSizeOptions = [
+  { value: '10', label: '10 per page' },
+  { value: '20', label: '20 per page' },
+  { value: '50', label: '50 per page' },
+  { value: '100', label: '100 per page' },
+];
 
 export default function CatalogPage() {
   const [items, setItems] = useState([]);
@@ -23,23 +31,16 @@ export default function CatalogPage() {
     itemBarcode: '',
   });
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchItems();
-    }, 300); // Debounce the API calls
-
-    return () => clearTimeout(timeoutId);
-  }, [currentPage, filters]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '20',
+        limit: itemsPerPage.toString(),
         ...Object.fromEntries(
           Object.entries(filters).filter(([_, value]) => value.trim() !== '')
         ),
@@ -52,6 +53,9 @@ export default function CatalogPage() {
         setItems(data.catalogs || []);
         setTotalPages(data.totalPages || 1);
         setTotalItems(data.total || 0);
+        if (data.totalPages && currentPage > data.totalPages) {
+          setCurrentPage(data.totalPages);
+        }
       } else {
         setError(data.message || 'Failed to fetch catalog items');
       }
@@ -61,7 +65,15 @@ export default function CatalogPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, filters, itemsPerPage]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchItems();
+    }, 300); // Debounce the API calls
+
+    return () => clearTimeout(timeoutId);
+  }, [fetchItems]);
 
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({
@@ -81,6 +93,28 @@ export default function CatalogPage() {
       itemBarcode: '',
     });
     setCurrentPage(1);
+  };
+
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - 2);
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+
+    return pages;
   };
 
   const getAvailabilityBadge = (item) => {
@@ -150,6 +184,11 @@ export default function CatalogPage() {
     ),
   }));
 
+  const hasFilters = Object.values(filters).some((f) => f.trim() !== '');
+  const firstItemIndex =
+    totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+  const lastItemIndex = Math.min(currentPage * itemsPerPage, totalItems);
+
   if (loading && items.length === 0) {
     return (
       <div className={styles.pageContainer}>
@@ -179,124 +218,179 @@ export default function CatalogPage() {
 
       {error && <Alert type='error' message={error} />}
 
-      {/* Filters */}
-      <Card title='Filter Items'>
-        <div className={styles.filtersGrid}>
-          <Input
-            label='Title'
-            value={filters.title}
-            onChange={(e) => handleFilterChange('title', e.target.value)}
-            placeholder='Search by title...'
-          />
-          <Input
-            label='Subtitle'
-            value={filters.subtitle}
-            onChange={(e) => handleFilterChange('subtitle', e.target.value)}
-            placeholder='Search by subtitle...'
-          />
-          <Input
-            label='Author'
-            value={filters.author}
-            onChange={(e) => handleFilterChange('author', e.target.value)}
-            placeholder='Search by author...'
-          />
-          <Input
-            label='Classification'
-            value={filters.classification}
-            onChange={(e) =>
-              handleFilterChange('classification', e.target.value)
-            }
-            placeholder='Search by classification...'
-          />
-          <Input
-            label='Control Number'
-            value={filters.controlNumber}
-            onChange={(e) =>
-              handleFilterChange('controlNumber', e.target.value)
-            }
-            placeholder='Search by control number...'
-          />
-          <Input
-            label='Item Barcode'
-            value={filters.itemBarcode}
-            onChange={(e) => handleFilterChange('itemBarcode', e.target.value)}
-            placeholder='Search by barcode...'
-          />
-        </div>
-        <div className={styles.filterActions}>
-          <Button variant='secondary' onClick={clearFilters}>
-            Clear Filters
-          </Button>
-        </div>
-      </Card>
-
-      {/* Results Summary */}
-      <div className={styles.resultsSummary}>
-        <p>
-          Showing {items.length} of {totalItems} items
-          {Object.values(filters).some((f) => f.trim() !== '') && ' (filtered)'}
-        </p>
-      </div>
-
-      {/* Items Table */}
-      {items.length > 0 ? (
-        <>
-          <Table
-            columns={tableColumns}
-            data={tableData}
-            rowsPerPage={tableData.length}
-          />
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className={styles.pagination}>
-              <div className={styles.pageInfo}>
-                Page {currentPage} of {totalPages}
-              </div>
-              <div className={styles.pageButtons}>
-                <Button
-                  variant='secondary'
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant='secondary'
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
+      <div className={styles.catalogListLayout}>
+        <aside className={styles.filterPanel} aria-label='Catalog filters'>
+          <div className={styles.filterHeader}>
+            <div>
+              <h2>Filters</h2>
+              <p>Search the fields staff use most often.</p>
             </div>
-          )}
-        </>
-      ) : (
-        <Card>
-          <div className={styles.emptyState}>
-            <h3>No catalog items found</h3>
-            <p>
-              {Object.values(filters).some((f) => f.trim() !== '')
-                ? 'Try adjusting your search filters or clear them to see all items.'
-                : 'No catalog items have been added yet.'}
-            </p>
-            {Object.values(filters).some((f) => f.trim() !== '') ? (
-              <Button variant='secondary' onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            ) : (
-              <Link href='/catalog/new'>
-                <Button variant='primary'>Add First Item</Button>
-              </Link>
-            )}
+            {hasFilters && <Badge variant='info' label='Filtered' />}
           </div>
-        </Card>
-      )}
+          <div className={styles.filtersGrid}>
+            <Input
+              label='Title'
+              value={filters.title}
+              onChange={(e) => handleFilterChange('title', e.target.value)}
+              placeholder='Search by title...'
+            />
+            <Input
+              label='Subtitle'
+              value={filters.subtitle}
+              onChange={(e) => handleFilterChange('subtitle', e.target.value)}
+              placeholder='Search by subtitle...'
+            />
+            <Input
+              label='Author'
+              value={filters.author}
+              onChange={(e) => handleFilterChange('author', e.target.value)}
+              placeholder='Search by author...'
+            />
+            <Input
+              label='Classification'
+              value={filters.classification}
+              onChange={(e) =>
+                handleFilterChange('classification', e.target.value)
+              }
+              placeholder='Search by classification...'
+            />
+            <Input
+              label='Control Number'
+              value={filters.controlNumber}
+              onChange={(e) =>
+                handleFilterChange('controlNumber', e.target.value)
+              }
+              placeholder='Search by control number...'
+            />
+            <Input
+              label='Item Barcode'
+              value={filters.itemBarcode}
+              onChange={(e) =>
+                handleFilterChange('itemBarcode', e.target.value)
+              }
+              placeholder='Search by barcode...'
+            />
+          </div>
+          <div className={styles.filterActions}>
+            <Button variant='secondary' onClick={clearFilters} disabled={!hasFilters}>
+              Clear Filters
+            </Button>
+          </div>
+        </aside>
+
+        <section className={styles.catalogResults} aria-label='Catalog results'>
+          <div className={styles.resultsToolbar}>
+            <div className={styles.resultsSummary}>
+              <strong>
+                {totalItems === 0
+                  ? 'No items'
+                  : `${firstItemIndex}-${lastItemIndex} of ${totalItems} items`}
+              </strong>
+              <span>{hasFilters ? 'Filtered catalog results' : 'All catalog items'}</span>
+            </div>
+            <Select
+              label='Items per page'
+              value={String(itemsPerPage)}
+              onChange={(e) => handleItemsPerPageChange(e.target.value)}
+              options={pageSizeOptions}
+              aria-label='Items per page'
+            />
+          </div>
+
+          {items.length > 0 ? (
+            <>
+              <Table
+                columns={tableColumns}
+                data={tableData}
+                rowsPerPage={itemsPerPage}
+                showPagination={false}
+              />
+
+              <nav
+                className={styles.pagination}
+                aria-label='Catalog pagination'
+              >
+                <div className={styles.pageInfo}>
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className={styles.pageButtons}>
+                  <Button
+                    variant='secondary'
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1 || loading}
+                    aria-label='Go to first page'
+                  >
+                    First
+                  </Button>
+                  <Button
+                    variant='secondary'
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage === 1 || loading}
+                  >
+                    Previous
+                  </Button>
+                  <div className={styles.pageNumberGroup}>
+                    {getPageNumbers().map((page) => (
+                      <button
+                        key={page}
+                        type='button'
+                        className={`${styles.pageNumber} ${
+                          page === currentPage ? styles.activePage : ''
+                        }`}
+                        onClick={() => setCurrentPage(page)}
+                        aria-label={`Go to page ${page}`}
+                        aria-current={page === currentPage ? 'page' : undefined}
+                        disabled={loading}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    variant='secondary'
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                    }
+                    disabled={currentPage === totalPages || loading}
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant='secondary'
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages || loading}
+                    aria-label='Go to last page'
+                  >
+                    Last
+                  </Button>
+                </div>
+              </nav>
+            </>
+          ) : (
+            <Card>
+              <div className={styles.emptyState}>
+                <h3>No catalog items found</h3>
+                <p>
+                  {hasFilters
+                    ? 'Try adjusting your search filters or clear them to see all items.'
+                    : 'No catalog items have been added yet.'}
+                </p>
+                {hasFilters ? (
+                  <Button variant='secondary' onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
+                ) : (
+                  <Link href='/catalog/new'>
+                    <Button variant='primary'>Add First Item</Button>
+                  </Link>
+                )}
+              </div>
+            </Card>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

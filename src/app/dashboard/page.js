@@ -178,7 +178,26 @@ export default function DashboardPage() {
             </div>
           </div>
         </Card>
-
+        <Card title='Catalog Management'>
+          <div className={styles.cardContent}>
+            <p className={styles.cardDescription}>
+              Manage catalog for library resources, including adding new books
+              and updating existing records.
+            </p>
+            <div className={styles.cardActions}>
+              <Link href='/catalog/new'>
+                <Button variant='primary' className={styles.actionButton}>
+                  Add New Book
+                </Button>
+              </Link>
+              <Link href='/catalog'>
+                <Button variant='secondary' className={styles.actionButton}>
+                  View Catalog
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Card>
         <Card title='Quick Actions'>
           <div className={styles.cardContent}>
             <div className={styles.quickActions}>

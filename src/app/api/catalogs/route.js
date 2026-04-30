@@ -4,9 +4,86 @@ import { revalidatePath } from 'next/cache';
 import { dbConnect } from '@/lib/dbConnect';
 import Catalog from '@/models/CatalogingModel';
 
+const currentYear = new Date().getFullYear();
+
+const clean = (value) => {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : value;
+};
+
+const normalizeList = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(clean).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map(clean)
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const normalizePayload = (body) => {
+  const normalized = {
+    title: clean(body.title),
+    subtitle: clean(body.subtitle),
+    mainAuthor: clean(body.mainAuthor || body.author),
+    additionalAuthors: body.additionalAuthors,
+    publisher: clean(body.publisher),
+    place: clean(body.place || body.location),
+    year: clean(body.year || body.publicationYear),
+    ISBN: clean(body.ISBN || body.isbn),
+    barcode: clean(body.barcode || body.itemBarcode),
+    classification: clean(body.classification),
+    controlNumber: clean(body.controlNumber),
+    indexTermGenre: body.indexTermGenre || body.subject || body.keywords,
+    informationSummary: clean(body.informationSummary || body.description),
+    language: clean(body.language),
+    physicalDescription: clean(
+      body.physicalDescription ||
+        (body.numberOfPages ? `${body.numberOfPages} pages` : '')
+    ),
+    holdingsInformation: clean(body.holdingsInformation),
+    library: clean(body.library || 'AAoJ'),
+  };
+
+  if (!normalized.controlNumber && normalized.barcode) {
+    normalized.controlNumber = normalized.barcode;
+  }
+
+  return normalized;
+};
+
 export async function POST(request) {
   try {
-    const body = await request.json();
+    await dbConnect();
+
+    let body;
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Invalid request body. Please send valid JSON.',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Invalid request body. Please send a catalog object.',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
 
     let {
       title,
@@ -26,7 +103,7 @@ export async function POST(request) {
       physicalDescription,
       holdingsInformation,
       library,
-    } = body;
+    } = normalizePayload(body);
 
     // 🧩 Validate required fields
     const requiredFields = {
@@ -43,7 +120,7 @@ export async function POST(request) {
     };
 
     const missingFields = Object.entries(requiredFields)
-      .filter(([_, v]) => !v || !v.trim())
+      .filter(([_, v]) => !v)
       .map(([k]) => k);
 
     if (missingFields.length > 0) {
@@ -51,6 +128,49 @@ export async function POST(request) {
         {
           status: false,
           message: `Missing required fields: ${missingFields.join(', ')}`,
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    const parsedYear = Number(year);
+    if (
+      !Number.isInteger(parsedYear) ||
+      parsedYear < 1000 ||
+      parsedYear > currentYear + 1
+    ) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: `Year must be a valid number between 1000 and ${
+            currentYear + 1
+          }`,
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    const parsedHoldings =
+      holdingsInformation === '' || holdingsInformation === undefined
+        ? 0
+        : Number(holdingsInformation);
+
+    if (!Number.isInteger(parsedHoldings) || parsedHoldings < 0) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Holdings information must be zero or more',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    const compactIsbn = ISBN ? String(ISBN).replace(/[-\s]/g, '') : '';
+    if (compactIsbn && !/^(?:\d{9}[\dXx]|\d{13})$/.test(compactIsbn)) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'ISBN must be 10 or 13 digits, or left blank',
         },
         { status: StatusCodes.BAD_REQUEST }
       );
@@ -71,48 +191,37 @@ export async function POST(request) {
       );
     }
 
-    // 🧠 Normalize and prepare data
-    const parsedIndexTermGenre =
-      typeof indexTermGenre === 'string'
-        ? indexTermGenre
-            .split(',')
-            .map((term) => term.trim())
-            .filter(Boolean)
-        : Array.isArray(indexTermGenre)
-        ? indexTermGenre
-        : [];
-
     const catalogData = {
-      ISBN: ISBN?.trim() || '',
-      classification: classification.trim(),
-      informationSummary: informationSummary?.trim() || '',
-      language: language.trim(),
-      physicalDescription: physicalDescription?.trim() || '',
-      holdingsInformation: holdingsInformation?.trim() || '',
-      library: library.trim(),
-      barcode: barcode.trim(),
-      controlNumber: controlNumber.trim(),
-      title: { mainTitle: title.trim(), subtitle: subtitle?.trim() || '' },
+      ISBN: ISBN || '',
+      classification,
+      informationSummary: informationSummary || '',
+      language,
+      physicalDescription: physicalDescription || '',
+      holdingsInformation: parsedHoldings,
+      library,
+      barcode,
+      controlNumber,
+      title: { mainTitle: title, subtitle: subtitle || '' },
       author: {
-        mainAuthor: mainAuthor.trim(),
-        additionalAuthors: additionalAuthors?.trim() || '',
+        mainAuthor,
+        additionalAuthors: normalizeList(additionalAuthors),
       },
       publicationInfo: {
-        publisher: publisher.trim(),
-        place: place.trim(),
-        year: year.trim(),
+        publisher,
+        place,
+        year: parsedYear,
       },
-      indexTermGenre: parsedIndexTermGenre,
+      indexTermGenre: normalizeList(indexTermGenre),
     };
 
     // 💾 Create new catalog record
     const newCatalog = await Catalog.create(catalogData);
-    revalidatePath('/dashboard/catalogs');
+    revalidatePath('/catalog');
 
     return NextResponse.json(
       {
         status: true,
-        message: `Book added successfully ✅`,
+        message: 'Book added successfully',
         catalog: {
           title: newCatalog.title.mainTitle,
           controlNumber: newCatalog.controlNumber,
@@ -140,8 +249,13 @@ export async function GET(request) {
     await dbConnect();
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page')) || 1;
-    const limit = parseInt(searchParams.get('limit')) || 20;
+    const requestedPage = parseInt(searchParams.get('page'), 10);
+    const requestedLimit = parseInt(searchParams.get('limit'), 10);
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const limit =
+      Number.isInteger(requestedLimit) && requestedLimit > 0
+        ? Math.min(requestedLimit, 100)
+        : 20;
     const skip = (page - 1) * limit;
 
     // Build filter query

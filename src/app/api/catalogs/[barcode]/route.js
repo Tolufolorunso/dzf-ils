@@ -1,8 +1,31 @@
 import { NextResponse } from 'next/server';
 import { StatusCodes } from 'http-status-codes';
+import { revalidatePath } from 'next/cache';
 import { dbConnect } from '@/lib/dbConnect';
 import Catalog from '@/models/CatalogingModel';
 import { verifyAuth } from '@/lib/auth';
+
+const currentYear = new Date().getFullYear();
+
+const clean = (value) => {
+  if (value === null || value === undefined) return '';
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : value;
+};
+
+const normalizeList = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(clean).filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map(clean)
+      .filter(Boolean);
+  }
+
+  return [];
+};
 
 // GET single catalog item by barcode
 export async function GET(req, { params }) {
@@ -63,7 +86,19 @@ export async function PATCH(req, { params }) {
     await dbConnect();
 
     const { barcode: encodedBarcode } = await params;
-    const body = await req.json();
+    let body;
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Invalid request body. Please send valid JSON.',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
 
     if (!encodedBarcode) {
       return NextResponse.json(
@@ -73,6 +108,16 @@ export async function PATCH(req, { params }) {
     }
 
     const barcode = decodeURIComponent(encodedBarcode);
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Invalid request body. Please send a catalog object.',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
 
     // Extract and validate fields
     const {
@@ -85,6 +130,7 @@ export async function PATCH(req, { params }) {
       year,
       ISBN,
       classification,
+      controlNumber,
       indexTermGenre,
       informationSummary,
       language,
@@ -93,41 +139,130 @@ export async function PATCH(req, { params }) {
       library,
     } = body;
 
-    // Build update object
-    const updateData = {};
+    const normalized = {
+      title: clean(title),
+      subtitle: clean(subtitle),
+      mainAuthor: clean(mainAuthor),
+      additionalAuthors,
+      publisher: clean(publisher),
+      place: clean(place),
+      year: clean(year),
+      ISBN: clean(ISBN),
+      classification: clean(classification),
+      controlNumber: clean(controlNumber),
+      indexTermGenre,
+      informationSummary: clean(informationSummary),
+      language: clean(language),
+      physicalDescription: clean(physicalDescription),
+      holdingsInformation: clean(holdingsInformation),
+      library: clean(library),
+    };
 
-    if (title) updateData['title.mainTitle'] = title.trim();
-    if (subtitle !== undefined) updateData['title.subtitle'] = subtitle.trim();
-    if (mainAuthor) updateData['author.mainAuthor'] = mainAuthor.trim();
-    if (additionalAuthors !== undefined) {
-      updateData['author.additionalAuthors'] = Array.isArray(additionalAuthors)
-        ? additionalAuthors
-        : additionalAuthors
-            .split(',')
-            .map((a) => a.trim())
-            .filter(Boolean);
+    const requiredFields = {
+      title: normalized.title,
+      mainAuthor: normalized.mainAuthor,
+      publisher: normalized.publisher,
+      place: normalized.place,
+      year: normalized.year,
+      classification: normalized.classification,
+      controlNumber: normalized.controlNumber,
+      language: normalized.language,
+      library: normalized.library,
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`,
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
     }
-    if (publisher) updateData['publicationInfo.publisher'] = publisher.trim();
-    if (place) updateData['publicationInfo.place'] = place.trim();
-    if (year) updateData['publicationInfo.year'] = parseInt(year);
-    if (ISBN !== undefined) updateData.ISBN = ISBN.trim();
-    if (classification) updateData.classification = classification.trim();
-    if (indexTermGenre !== undefined) {
-      updateData.indexTermGenre = Array.isArray(indexTermGenre)
-        ? indexTermGenre
-        : indexTermGenre
-            .split(',')
-            .map((term) => term.trim())
-            .filter(Boolean);
+
+    const parsedYear = Number(normalized.year);
+    if (
+      !Number.isInteger(parsedYear) ||
+      parsedYear < 1000 ||
+      parsedYear > currentYear + 1
+    ) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: `Year must be a valid number between 1000 and ${
+            currentYear + 1
+          }`,
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
     }
-    if (informationSummary !== undefined)
-      updateData.informationSummary = informationSummary.trim();
-    if (language) updateData.language = language.trim();
-    if (physicalDescription !== undefined)
-      updateData.physicalDescription = physicalDescription.trim();
-    if (holdingsInformation !== undefined)
-      updateData.holdingsInformation = parseInt(holdingsInformation) || 0;
-    if (library) updateData.library = library.trim();
+
+    const parsedHoldings =
+      normalized.holdingsInformation === ''
+        ? 0
+        : Number(normalized.holdingsInformation);
+
+    if (!Number.isInteger(parsedHoldings) || parsedHoldings < 0) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Holdings information must be zero or more',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    const compactIsbn = normalized.ISBN
+      ? String(normalized.ISBN).replace(/[-\s]/g, '')
+      : '';
+    if (compactIsbn && !/^(?:\d{9}[\dXx]|\d{13})$/.test(compactIsbn)) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'ISBN must be 10 or 13 digits, or left blank',
+        },
+        { status: StatusCodes.BAD_REQUEST }
+      );
+    }
+
+    const duplicateControlNumber = await Catalog.findOne({
+      barcode: { $ne: barcode },
+      controlNumber: normalized.controlNumber,
+    });
+
+    if (duplicateControlNumber) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: 'Control Number already exists',
+        },
+        { status: StatusCodes.CONFLICT }
+      );
+    }
+
+    // Build update object
+    const updateData = {
+      ISBN: normalized.ISBN || '',
+      classification: normalized.classification,
+      controlNumber: normalized.controlNumber,
+      informationSummary: normalized.informationSummary || '',
+      language: normalized.language,
+      physicalDescription: normalized.physicalDescription || '',
+      holdingsInformation: parsedHoldings,
+      library: normalized.library,
+      'title.mainTitle': normalized.title,
+      'title.subtitle': normalized.subtitle || '',
+      'author.mainAuthor': normalized.mainAuthor,
+      'author.additionalAuthors': normalizeList(normalized.additionalAuthors),
+      'publicationInfo.publisher': normalized.publisher,
+      'publicationInfo.place': normalized.place,
+      'publicationInfo.year': parsedYear,
+      indexTermGenre: normalizeList(normalized.indexTermGenre),
+    };
 
     const updatedItem = await Catalog.findOneAndUpdate(
       { barcode },
@@ -141,6 +276,9 @@ export async function PATCH(req, { params }) {
         { status: StatusCodes.NOT_FOUND }
       );
     }
+
+    revalidatePath('/catalog');
+    revalidatePath(`/catalog/${encodeURIComponent(updatedItem.barcode)}`);
 
     return NextResponse.json(
       {

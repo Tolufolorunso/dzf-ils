@@ -24,7 +24,7 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, var(--primary-600), var(--secondary-600));
+  background: linear-gradient(135deg, var(--brand-primary), #4f46e5);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -36,6 +36,15 @@
   margin: 0;
 }
 
+.overline {
+  margin: 0 0 0.35rem;
+  color: var(--brand-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .headerActions {
   display: flex;
   gap: 1rem;
@@ -43,9 +52,51 @@
 }
 
 /* Filters */
+.catalogListLayout {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.filterPanel,
+.catalogResults {
+  min-width: 0;
+}
+
+.filterPanel {
+  position: sticky;
+  top: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.filterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filterHeader h2 {
+  margin: 0 0 0.25rem;
+  color: var(--foreground);
+  font-size: 1.1rem;
+}
+
+.filterHeader p {
+  margin: 0;
+  color: color-mix(in srgb, var(--foreground) 68%, transparent);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .filtersGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -59,18 +110,37 @@
 }
 
 /* Results Summary */
-.resultsSummary {
-  margin: 1.5rem 0;
+.resultsToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
   padding: 1rem;
-  background: var(--background-secondary);
-  border-radius: var(--border-radius);
-  border-left: 4px solid var(--primary-500);
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
 }
 
-.resultsSummary p {
+.resultsToolbar > div:last-child {
+  width: min(190px, 100%);
+}
+
+.resultsSummary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.resultsSummary strong {
   margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.resultsSummary span {
   color: var(--text-secondary);
   font-weight: 500;
+  font-size: 0.9rem;
 }
 
 /* Table Styles */
@@ -118,7 +188,41 @@
 
 .pageButtons {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.pageNumberGroup {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.pageNumber {
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  color: var(--text-primary);
+  background: var(--surface);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pageNumber:hover:not(:disabled),
+.pageNumber:focus-visible {
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  outline: none;
+}
+
+.activePage {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: white;
 }
 
 /* Loading and Empty States */
@@ -195,6 +299,23 @@
     font-size: 2rem;
   }
 
+  .catalogListLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .filterPanel {
+    position: static;
+  }
+
+  .resultsToolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resultsToolbar > div:last-child {
+    width: 100%;
+  }
+
   .filtersGrid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -212,6 +333,10 @@
     flex-direction: column;
     gap: 1rem;
     text-align: center;
+  }
+
+  .pageButtons {
+    justify-content: center;
   }
 
   .actionButtons {
@@ -232,6 +357,10 @@
   .headerActions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .detailStats {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -263,6 +392,204 @@
   border-top: 1px solid var(--border-color);
 }
 
+/* Catalog Entry */
+.catalogEntryLayout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.entrySidebar {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.progressCard,
+.quickActions,
+.formSection,
+.stickyActions,
+.successPanel {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.progressCard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.progressCard strong,
+.progressCard span {
+  display: block;
+}
+
+.progressCard span,
+.sectionHeader p,
+.successPanel span {
+  color: color-mix(in srgb, var(--foreground) 68%, transparent);
+  font-size: 0.9rem;
+}
+
+.progressIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+}
+
+.progressTrack {
+  grid-column: 1 / -1;
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand-primary), #2563eb);
+  transition: width var(--transition-base);
+}
+
+.quickActions {
+  display: grid;
+  overflow: hidden;
+}
+
+.quickActions button {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+  font-weight: 600;
+}
+
+.quickActions button:last-child {
+  border-bottom: 0;
+}
+
+.quickActions button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--brand-primary) 8%, transparent);
+  color: var(--brand-primary);
+}
+
+.entryForm {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.formSection {
+  padding: 1.1rem;
+}
+
+.sectionHeader {
+  margin-bottom: 1rem;
+}
+
+.sectionHeader h2 {
+  margin: 0 0 0.25rem;
+  color: var(--foreground);
+  font-size: 1.1rem;
+}
+
+.sectionHeader p {
+  margin: 0;
+}
+
+.formSection .formGrid {
+  margin-bottom: 0;
+}
+
+.formSection textarea {
+  margin-top: 1rem;
+}
+
+.stickyActions {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.08);
+}
+
+.checkboxControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.checkboxControl input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--brand-primary);
+}
+
+.actionCluster {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.actionCluster button,
+.headerActions button {
+  gap: 0.45rem;
+}
+
+.successPanel {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.successPanel div {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.successPanel strong,
+.successPanel span {
+  overflow-wrap: anywhere;
+}
+
+.successPanel a {
+  flex-shrink: 0;
+  font-weight: 700;
+  color: #166534;
+}
+
 @media (max-width: 768px) {
   .formGrid {
     grid-template-columns: 1fr;
@@ -273,17 +600,120 @@
     flex-direction: column-reverse;
     align-items: stretch;
   }
+
+  .catalogEntryLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .entrySidebar,
+  .stickyActions {
+    position: static;
+  }
+
+  .stickyActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actionCluster {
+    flex-direction: column-reverse;
+  }
+
+  .successPanel {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
 }
 /* Detail and Edit Page Styles */
+.detailHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.detailHeroMain {
+  min-width: 0;
+}
+
+.detailHeroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  margin-top: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.detailStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.statCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.statCard svg {
+  flex-shrink: 0;
+  color: var(--brand-primary);
+}
+
+.statCard div {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.statCard span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.statCard strong {
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+}
+
 .detailGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.detailPanel {
+  min-width: 0;
+  padding: 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+}
+
+.detailPanelWide {
+  grid-column: 1 / -1;
 }
 
 .infoGrid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -302,6 +732,11 @@
 .infoItem span {
   color: var(--text-primary);
   font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.infoItemWide {
+  grid-column: 1 / -1;
 }
 
 .barcode {
@@ -393,6 +828,31 @@
   margin-top: 1.5rem;
 }
 
+.deleteDialog {
+  width: min(520px, calc(100vw - 2rem));
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: var(--surface);
+  border-radius: 0.5rem;
+}
+
+.deleteSummary {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.deleteInstruction {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 /* Loading and Error States */
 .loadingContainer {
   display: flex;
@@ -441,7 +901,19 @@
     justify-content: flex-start;
   }
 
+  .detailHero {
+    flex-direction: column;
+  }
+
+  .detailStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .detailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .infoGrid {
     grid-template-columns: 1fr;
   }
 
