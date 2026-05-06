@@ -434,7 +434,7 @@ export default function PatronDetailPage() {
       <div className={styles.pageHeader}>
         <div className={styles.headerActions}>
           <Link href='/patrons'>
-            <Button variant='secondary'>← Back to Patrons</Button>
+            <Button variant='secondary'>Back to Patrons</Button>
           </Link>
           <Link href={`/patrons/${patron.barcode}/edit`}>
             <Button variant='primary'>Edit Patron</Button>
@@ -442,20 +442,20 @@ export default function PatronDetailPage() {
           {patron.active ? (
             ['admin', 'asst_admin', 'ict'].includes(currentUser?.role) && (
               <Button
-                variant='warning'
+                variant='warningBadge'
                 onClick={() => handlePatronStatusChange('deactivate')}
                 disabled={deactivating}
               >
-                {deactivating ? 'Deactivating...' : '⏸️ Deactivate'}
+                {deactivating ? 'Deactivating...' : 'Deactivate'}
               </Button>
             )
           ) : (
             <Button
-              variant='success'
+              variant='primary'
               onClick={() => handlePatronStatusChange('activate')}
               disabled={activating}
             >
-              {activating ? 'Activating...' : '▶️ Reactivate'}
+              {activating ? 'Activating...' : 'Reactivate'}
             </Button>
           )}
           {currentUser?.role === 'admin' && (
@@ -464,7 +464,7 @@ export default function PatronDetailPage() {
               onClick={openDeleteConfirm}
               disabled={deleting}
             >
-              🗑️ Delete Patron
+              Delete Patron
             </Button>
           )}
         </div>
@@ -646,6 +646,25 @@ export default function PatronDetailPage() {
           </div>
         </Card>
 
+        {/* Currently Borrowed Item */}
+        {patron.activeCheckout && (
+          <Card title='Currently Borrowed Item' className={styles.activeCheckoutCard}>
+            <div className={styles.activeCheckout}>
+              <div className={styles.activeCheckoutHeader}>
+                <span className={styles.activeCheckoutTitle}>
+                  {patron.activeCheckout.title} {patron.activeCheckout.subtitle && ` - ${patron.activeCheckout.subtitle}`}
+                </span>
+                <Badge variant='warningBadge' label='Borrowed' />
+              </div>
+              <div className={styles.activeCheckoutDetails}>
+                <span><strong>Barcode:</strong> {patron.activeCheckout.barcode}</span>
+                <span><strong>Checked out:</strong> {formatDate(patron.activeCheckout.checkoutDate)}</span>
+                <span><strong>Due:</strong> {formatDate(patron.activeCheckout.dueDate)}</span>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Borrowing History */}
         <Card title='Borrowing History'>
           {patron.itemsCheckedOutHistory &&
@@ -814,3 +833,5 @@ export default function PatronDetailPage() {
     </div>
   );
 }
+
+

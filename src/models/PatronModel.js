@@ -99,6 +99,18 @@ const PatronSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    lastBorrowedItem: {
+      itemId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Cataloging',
+      },
+      itemTitle: String,
+      itemSubTitle: String,
+      itemBarcode: String,
+      checkoutDate: Date,
+      dueDate: Date,
+      returnedAt: Date,
+    },
     points: {
       type: Number,
       default: 0,
@@ -124,11 +136,13 @@ const PatronSchema = new mongoose.Schema(
         itemBarcode: String,
         checkoutDate: Date,
         dueDate: Date,
+        returnedAt: Date,
         event: {
           type: Boolean,
           default: false,
         },
         eventTitle: String,
+        returnedAt: Date,
       },
     ],
     is18: {

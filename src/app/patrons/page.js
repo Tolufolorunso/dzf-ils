@@ -211,6 +211,15 @@ export default function PatronsPage() {
         <p className={styles.pageSubtitle}>
           Manage library patrons and their information
         </p>
+        <div className={styles.patronStatsRow}>
+          <span className={styles.patronStat}>Total: {filteredPatrons.length}</span>
+          <span className={styles.patronStat}>
+            Active: {filteredPatrons.filter((patron) => patron.active).length}
+          </span>
+          <span className={styles.patronStat}>
+            Inactive: {filteredPatrons.filter((patron) => !patron.active).length}
+          </span>
+        </div>
       </div>
 
       <div className={styles.contentGrid}>
@@ -301,7 +310,7 @@ export default function PatronsPage() {
                 </Link>
               </div>
 
-              <Table columns={columns} data={currentPatrons} />
+              <Table columns={columns} data={currentPatrons} showPagination={false} />
 
               {totalPages > 1 && (
                 <div className={styles.pagination}>

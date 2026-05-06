@@ -27,6 +27,25 @@
   margin: 0;
 }
 
+.patronStatsRow {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.patronStat {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--brand-primary) 8%);
+  border: 1px solid var(--border-color);
+  color: var(--foreground);
+  font-size: 0.82rem;
+}
+
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr;
@@ -399,6 +418,37 @@
   border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   background: var(--surface);
+}
+
+.activeCheckoutCard {
+  border-left: 4px solid var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 5%, transparent);
+}
+
+.activeCheckout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activeCheckoutHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activeCheckoutTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.activeCheckoutDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.95rem;
+  color: var(--foreground);
 }
 
 .historyItemHeader {

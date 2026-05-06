@@ -73,12 +73,46 @@ export async function POST(request) {
     if (lastCheckout) {
       if (nextHasBorrowedBook && lastCheckout.returnedAt) {
         lastCheckout.returnedAt = null;
+        const patronHistoryIndex = patron.itemsCheckedOutHistory.findIndex(
+          (item) => item.itemBarcode === itemBarcode && item.returnedAt
+        );
+        if (patronHistoryIndex !== -1) {
+          patron.itemsCheckedOutHistory[patronHistoryIndex].returnedAt = undefined;
+        }
       }
 
       if (!nextHasBorrowedBook && !lastCheckout.returnedAt) {
         lastCheckout.returnedAt = new Date();
+        const patronHistoryIndex = patron.itemsCheckedOutHistory.findIndex(
+          (item) => item.itemBarcode === itemBarcode && !item.returnedAt
+        );
+        if (patronHistoryIndex !== -1) {
+          patron.itemsCheckedOutHistory[patronHistoryIndex].returnedAt = new Date();
+        }
       }
     }
+
+    if (!catalogItem.lastBorrowedBy) {
+      catalogItem.lastBorrowedBy = {};
+    }
+    catalogItem.lastBorrowedBy.patronId = patron._id;
+    catalogItem.lastBorrowedBy.patronBarcode = patron.barcode;
+    catalogItem.lastBorrowedBy.patronName =
+      `${patron.surname}, ${patron.firstname}`.trim();
+    catalogItem.lastBorrowedBy.returnedAt = nextHasBorrowedBook
+      ? null
+      : new Date();
+
+    if (!patron.lastBorrowedItem) {
+      patron.lastBorrowedItem = {};
+    }
+    patron.lastBorrowedItem.itemId = catalogItem._id;
+    patron.lastBorrowedItem.itemTitle = catalogItem.title?.mainTitle || '';
+    patron.lastBorrowedItem.itemSubTitle = catalogItem.title?.subtitle || '';
+    patron.lastBorrowedItem.itemBarcode = catalogItem.barcode;
+    patron.lastBorrowedItem.returnedAt = nextHasBorrowedBook
+      ? null
+      : new Date();
 
     await Promise.all([patron.save(), catalogItem.save()]);
 

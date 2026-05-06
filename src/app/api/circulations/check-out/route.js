@@ -166,6 +166,16 @@ export async function POST(request) {
         'No Phone Number',
       barcode: patron.barcode,
     });
+    catalog.lastBorrowedBy = {
+      patronId: patron._id,
+      patronBarcode: patron.barcode,
+      patronName: `${patron.surname}, ${patron.firstname} ${
+        patron.middlename || ''
+      }`.trim(),
+      checkedOutAt: currentDate,
+      dueDate,
+      returnedAt: null,
+    };
     catalog.isCheckedOut = true;
     await catalog.save();
 
@@ -179,6 +189,7 @@ export async function POST(request) {
         itemId: catalog._id,
         checkoutDate: currentDate,
         dueDate,
+        returnedAt: null,
         itemTitle: catalog.title.mainTitle,
         itemSubTitle: catalog.title.subtitle,
         itemBarcode: catalog.barcode,
@@ -186,6 +197,16 @@ export async function POST(request) {
         event: true,
       });
     }
+
+    patron.lastBorrowedItem = {
+      itemId: catalog._id,
+      itemTitle: catalog.title.mainTitle,
+      itemSubTitle: catalog.title.subtitle,
+      itemBarcode: catalog.barcode,
+      checkoutDate: currentDate,
+      dueDate,
+      returnedAt: null,
+    };
 
     patron.hasBorrowedBook = true;
     await patron.save();

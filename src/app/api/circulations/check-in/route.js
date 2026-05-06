@@ -77,10 +77,37 @@ export async function POST(request) {
     if (lastCheckout && !lastCheckout.returnedAt) {
       lastCheckout.returnedAt = new Date();
     }
+    if (catalogItem.lastBorrowedBy && !catalogItem.lastBorrowedBy.returnedAt) {
+      catalogItem.lastBorrowedBy.returnedAt = new Date();
+    }
 
     await catalogItem.save();
 
+    // Update patron's history with returnedAt
+    const patronHistoryIndex = patron.itemsCheckedOutHistory.findIndex(
+      (item) => item.itemBarcode === itemBarcode && !item.returnedAt
+    );
+    if (patronHistoryIndex !== -1) {
+      patron.itemsCheckedOutHistory[patronHistoryIndex].returnedAt = new Date();
+    }
+
     patron.hasBorrowedBook = false;
+    const borrowedHistoryIndex = [...(patron.itemsCheckedOutHistory || [])]
+      .reverse()
+      .findIndex(
+        (entry) => entry.itemBarcode === catalogItem.barcode && !entry.returnedAt
+      );
+    if (borrowedHistoryIndex !== -1) {
+      const actualIndex =
+        patron.itemsCheckedOutHistory.length - 1 - borrowedHistoryIndex;
+      patron.itemsCheckedOutHistory[actualIndex].returnedAt = new Date();
+    }
+    if (
+      patron.lastBorrowedItem?.itemBarcode === catalogItem.barcode &&
+      !patron.lastBorrowedItem?.returnedAt
+    ) {
+      patron.lastBorrowedItem.returnedAt = new Date();
+    }
 
     if (point && Number(point) > 0) {
       patron.points = (patron.points || 0) + Number(point);

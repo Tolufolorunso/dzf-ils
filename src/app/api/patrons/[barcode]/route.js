@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 import jwt from 'jsonwebtoken';
 import { dbConnect } from '@/lib/dbConnect';
 import PatronModel from '@/models/PatronModel';
+import CatalogingModel from '@/models/CatalogingModel';
 import UserModel from '@/models/UserModel';
 import { verifyAuth } from '@/lib/auth';
 import { canManagePatronStatus } from '@/lib/permissions';
@@ -30,7 +31,7 @@ export async function GET(req, { params }) {
       );
     }
 
-    const patron = await PatronModel.findOne({ barcode }).select('-__v');
+    const patron = await PatronModel.findOne({ barcode }).select('-__v').lean();
 
     if (!patron) {
       return NextResponse.json(
@@ -39,10 +40,56 @@ export async function GET(req, { params }) {
       );
     }
 
+    // Find active checkout for this patron
+    const activeCheckoutItem = await CatalogingModel.findOne({
+      isCheckedOut: true,
+      'patronsCheckedOutHistory': {
+        $elemMatch: {
+          barcode: barcode,
+          returnedAt: null
+        }
+      }
+    }).select('title barcode image_url patronsCheckedOutHistory').lean();
+
+    let activeCheckout = null;
+    if (activeCheckoutItem) {
+      const historyEntry = activeCheckoutItem.patronsCheckedOutHistory.find(
+        (h) => h.barcode === barcode && !h.returnedAt
+      );
+      if (historyEntry) {
+        activeCheckout = {
+          title: activeCheckoutItem.title.mainTitle,
+          subtitle: activeCheckoutItem.title.subtitle,
+          barcode: activeCheckoutItem.barcode,
+          image_url: activeCheckoutItem.image_url,
+          checkoutDate: historyEntry.checkedOutAt,
+          dueDate: historyEntry.dueDate,
+        };
+      }
+    }
+
+    const borrowingHistory = [...(patron.itemsCheckedOutHistory || [])]
+      .sort(
+        (left, right) =>
+          new Date(right.checkoutDate || 0).getTime() -
+          new Date(left.checkoutDate || 0).getTime()
+      )
+      .slice(0, 5);
+
+    const lastBorrowedItem =
+      patron.lastBorrowedItem && !patron.lastBorrowedItem.returnedAt
+        ? patron.lastBorrowedItem
+        : null;
+
     return NextResponse.json(
       {
         status: true,
-        data: patron,
+        data: {
+          ...patron,
+          activeCheckout,
+          lastBorrowedItem,
+          itemsCheckedOutHistory: borrowingHistory,
+        },
       },
       { status: StatusCodes.OK }
     );
