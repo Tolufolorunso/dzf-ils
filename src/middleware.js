@@ -39,6 +39,7 @@ const ROUTES = {
   protectedApi: [
     '/api/auth/me',
     '/api/catalog',
+    '/api/catalogs',
     '/api/circulations',
     '/api/patrons',
     '/api/settings',
@@ -126,6 +127,12 @@ function createRedirectResponse(url, request, options = {}) {
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const isApiRoute = pathname.startsWith('/api/');
+  const isPublicRoute = matchesPath(pathname, [
+    ...ROUTES.public,
+    ...ROUTES.publicApi,
+  ]);
+  const isAuthPage = matchesPath(pathname, ROUTES.authPages);
 
   // Skip middleware for static assets (additional safety)
   if (pathname.includes('/_next/') || pathname.includes('/static/')) {
@@ -139,7 +146,7 @@ export async function middleware(request) {
 
   try {
     // Case 1: Authenticated user trying to access auth pages
-    if (token && matchesPath(pathname, ROUTES.authPages)) {
+    if (token && isAuthPage) {
       try {
         const payload = await verifyJWT(token);
 
@@ -159,20 +166,19 @@ export async function middleware(request) {
     }
 
     // Case 2: Public routes - no authentication required
-    if (matchesPath(pathname, [...ROUTES.public, ...ROUTES.publicApi])) {
+    if (isPublicRoute) {
       return NextResponse.next();
     }
 
-    // Case 3: Protected routes - authentication required
-    const isProtectedRoute = matchesPath(pathname, [
-      ...ROUTES.protected,
-      ...ROUTES.protectedApi,
-    ]);
+    // Case 3: Non-public routes require authentication by default.
+    const requiresAuth =
+      matchesPath(pathname, [...ROUTES.protected, ...ROUTES.protectedApi]) ||
+      !isPublicRoute;
 
-    if (isProtectedRoute) {
+    if (requiresAuth) {
       if (!token) {
         // API routes should return 401 instead of redirect
-        if (pathname.startsWith('/api/')) {
+        if (isApiRoute) {
           return NextResponse.json(
             { error: 'Authentication required' },
             { status: 401 }
@@ -202,7 +208,7 @@ export async function middleware(request) {
         console.error('Token verification failed:', error.message);
 
         // API routes return 401
-        if (pathname.startsWith('/api/')) {
+        if (isApiRoute) {
           const response = NextResponse.json(
             { error: 'Invalid or expired token' },
             { status: 401 }
@@ -242,6 +248,21 @@ export async function middleware(request) {
     // but log the error for debugging
     if (process.env.NODE_ENV === 'development') {
       console.error('Middleware stack trace:', error.stack);
+    }
+
+    if (isApiRoute) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!isPublicRoute) {
+      return createRedirectResponse(LOGIN_PATH, request, {
+        redirect: pathname,
+        message: 'Please log in to continue',
+        clearToken: true,
+      });
     }
 
     return NextResponse.next();

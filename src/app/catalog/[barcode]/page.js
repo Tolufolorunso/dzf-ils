@@ -52,7 +52,7 @@ export default function CatalogDetailPage() {
       setError('');
       const decodedBarcode = decodeURIComponent(params.barcode);
       const response = await fetch(
-        `/api/catalogs/${encodeURIComponent(decodedBarcode)}`
+        `/api/catalogs/${encodeURIComponent(decodedBarcode)}`,
       );
       const data = await response.json();
 
@@ -100,7 +100,7 @@ export default function CatalogDetailPage() {
 
       const response = await fetch(
         `/api/catalogs/${encodeURIComponent(item.barcode)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
       );
       const data = await response.json();
 
@@ -251,7 +251,9 @@ export default function CatalogDetailPage() {
           <div className={styles.infoGrid}>
             <DetailItem label='Title'>{item.title?.mainTitle}</DetailItem>
             <DetailItem label='Subtitle'>{item.title?.subtitle}</DetailItem>
-            <DetailItem label='Main author'>{item.author?.mainAuthor}</DetailItem>
+            <DetailItem label='Main author'>
+              {item.author?.mainAuthor}
+            </DetailItem>
             <DetailItem label='Additional authors'>
               {formatArray(item.author?.additionalAuthors)}
             </DetailItem>
@@ -278,8 +280,12 @@ export default function CatalogDetailPage() {
             </DetailItem>
             <DetailItem label='Language'>{item.language}</DetailItem>
             <DetailItem label='Copies'>{item.holdingsInformation}</DetailItem>
-            <DetailItem label='Availability'>{getAvailabilityBadge()}</DetailItem>
-            <DetailItem label='Created'>{formatDate(item.createdAt)}</DetailItem>
+            <DetailItem label='Availability'>
+              {getAvailabilityBadge()}
+            </DetailItem>
+            <DetailItem label='Created'>
+              {formatDate(item.createdAt)}
+            </DetailItem>
           </div>
         </section>
 
@@ -302,20 +308,27 @@ export default function CatalogDetailPage() {
         </section>
 
         {item.patronsCheckedOutHistory?.length > 0 && (
-          <section className={`${styles.detailPanel} ${styles.detailPanelWide}`}>
+          <section
+            className={`${styles.detailPanel} ${styles.detailPanelWide}`}
+          >
             <div className={styles.sectionHeader}>
               <h2>Checkout history</h2>
               <p>Previous circulation records for this item.</p>
             </div>
             <div className={styles.historyList}>
               {item.patronsCheckedOutHistory.map((checkout, index) => (
-                <div key={`${checkout.barcode}-${index}`} className={styles.historyItem}>
+                <div
+                  key={`${checkout.barcode}-${index}`}
+                  className={styles.historyItem}
+                >
                   <div className={styles.historyItemHeader}>
                     <strong>{checkout.fullname || 'N/A'}</strong>
                     <Badge variant='info' label={checkout.barcode || 'N/A'} />
                   </div>
                   <div className={styles.historyItemDetails}>
-                    <span>Checked out: {formatDate(checkout.checkedOutAt)}</span>
+                    <span>
+                      Checked out: {formatDate(checkout.checkedOutAt)}
+                    </span>
                     <span>Due: {formatDate(checkout.dueDate)}</span>
                     <span>Contact: {checkout.contactNumber || 'N/A'}</span>
                   </div>

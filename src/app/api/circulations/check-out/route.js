@@ -103,6 +103,22 @@ export async function POST(request) {
       );
     }
 
+    const hasActiveCheckout = await Catalog.exists({
+      isCheckedOut: true,
+      patronsCheckedOutHistory: {
+        $elemMatch: {
+          barcode: patron.barcode,
+          returnedAt: { $in: [null, undefined] },
+        },
+      },
+    });
+
+    // Self-heal stale patron flag when no active loan exists for this patron.
+    if (patron.hasBorrowedBook && !hasActiveCheckout) {
+      patron.hasBorrowedBook = false;
+      await patron.save();
+    }
+
     if (patron.hasBorrowedBook) {
       return NextResponse.json(
         {
@@ -115,6 +131,15 @@ export async function POST(request) {
     }
 
     // 🚫 Item availability check
+    const latestCheckout = catalog.patronsCheckedOutHistory?.at(-1);
+    const latestReturned = Boolean(latestCheckout?.returnedAt);
+
+    // Self-heal stale catalog flag when latest checkout is already returned.
+    if (catalog.isCheckedOut && latestReturned) {
+      catalog.isCheckedOut = false;
+      await catalog.save();
+    }
+
     if (catalog.isCheckedOut) {
       return NextResponse.json(
         { status: false, message: 'Item is already checked out' },

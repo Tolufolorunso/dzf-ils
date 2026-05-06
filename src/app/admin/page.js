@@ -23,6 +23,11 @@ function AdminDashboardContent() {
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState('');
   const [pageSuccess, setPageSuccess] = useState('');
+  const [overrideLoading, setOverrideLoading] = useState(false);
+  const [overrideForm, setOverrideForm] = useState({
+    patronBarcode: '',
+    itemBarcode: '',
+  });
 
   const fetchAdminData = async ({ background = false } = {}) => {
     try {
@@ -86,6 +91,52 @@ function AdminDashboardContent() {
       setPageError('Network error. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleOverrideInput = (event) => {
+    const { name, value } = event.target;
+    setOverrideForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCirculationOverride = async (event) => {
+    event.preventDefault();
+    setOverrideLoading(true);
+    setPageError('');
+    setPageSuccess('');
+
+    try {
+      const response = await fetch('/api/admin/circulation-override', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(overrideForm),
+      });
+
+      const data = await response.json();
+
+      if (!data.status) {
+        setPageError(data.message || 'Failed to run circulation override.');
+        return;
+      }
+
+      setPageSuccess(
+        `${data.message} Patron hasBorrowedBook: ${data.data.hasBorrowedBook}. Item isCheckedOut: ${data.data.isCheckedOut}.`
+      );
+
+      setOverrideForm({
+        patronBarcode: '',
+        itemBarcode: '',
+      });
+    } catch (error) {
+      console.error('Circulation override error:', error);
+      setPageError('Network error. Please try again.');
+    } finally {
+      setOverrideLoading(false);
     }
   };
 
@@ -239,6 +290,48 @@ function AdminDashboardContent() {
                     <span>Preview the final result board and publish state.</span>
                   </Link>
                 </div>
+              </Card>
+            </section>
+
+            <section className={styles.futureSection}>
+              <Card title='Circulation Recovery Controls'>
+                <form
+                  className={styles.overrideForm}
+                  onSubmit={handleCirculationOverride}
+                >
+                  <p className={styles.overrideHelp}>
+                    Use this only when a patron/item circulation state is stuck.
+                    This action flips patron `hasBorrowedBook` and sets item
+                    `isCheckedOut` to the same value.
+                  </p>
+                  <label className={styles.overrideLabel}>
+                    Patron Barcode
+                    <input
+                      className={styles.overrideInput}
+                      name='patronBarcode'
+                      value={overrideForm.patronBarcode}
+                      onChange={handleOverrideInput}
+                      placeholder='Enter patron barcode'
+                      required
+                    />
+                  </label>
+                  <label className={styles.overrideLabel}>
+                    Item Barcode
+                    <input
+                      className={styles.overrideInput}
+                      name='itemBarcode'
+                      value={overrideForm.itemBarcode}
+                      onChange={handleOverrideInput}
+                      placeholder='Enter item barcode'
+                      required
+                    />
+                  </label>
+                  <div className={styles.actions}>
+                    <Button type='submit' variant='primary' disabled={overrideLoading}>
+                      {overrideLoading ? 'Applying Override...' : 'Run Override'}
+                    </Button>
+                  </div>
+                </form>
               </Card>
             </section>
 

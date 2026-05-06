@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Card from '@/components/ui/Card';
 import Table from '@/components/ui/Table';
 import Alert from '@/components/ui/Alert';
 import Button from '@/components/ui/button';
 import Badge from '@/components/ui/Badge';
+import Input from '@/components/ui/Input';
 import styles from '../circulation.module.css';
 
 export default function OverduesPage() {
@@ -14,6 +15,7 @@ export default function OverduesPage() {
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchOverdues();
@@ -68,7 +70,19 @@ export default function OverduesPage() {
     { key: 'overdueDays', label: 'Overdue' },
   ];
 
-  const tableData = overdues.map((overdue) => {
+  const filteredOverdues = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return overdues.filter((item) => {
+      if (!query) return true;
+
+      return [item.title, item.patronName, item.patronBarcode, item.itemBarcode]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query));
+    });
+  }, [overdues, searchTerm]);
+
+  const tableData = filteredOverdues.map((overdue) => {
     const days = calculateOverdueDays(overdue.dueDate);
     return {
       ...overdue,
@@ -77,24 +91,28 @@ export default function OverduesPage() {
     };
   });
 
-  const totalPages = Math.ceil(overdues.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredOverdues.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentOverdues = tableData.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, overdues.length]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
   const overdueStats = {
-    total: overdues.length,
-    critical: overdues.filter((item) => calculateOverdueDays(item.dueDate) > 30)
+    total: filteredOverdues.length,
+    critical: filteredOverdues.filter((item) => calculateOverdueDays(item.dueDate) > 30)
       .length,
-    moderate: overdues.filter((item) => {
+    moderate: filteredOverdues.filter((item) => {
       const days = calculateOverdueDays(item.dueDate);
       return days > 7 && days <= 30;
     }).length,
-    mild: overdues.filter((item) => {
+    mild: filteredOverdues.filter((item) => {
       const days = calculateOverdueDays(item.dueDate);
       return days > 0 && days <= 7;
     }).length,
@@ -105,113 +123,100 @@ export default function OverduesPage() {
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Overdue Items</h1>
         <p className={styles.pageSubtitle}>
-          Track and manage overdue library items
+          Search, prioritize, and follow up on overdue returns
         </p>
       </div>
 
-      <div className={styles.contentGrid}>
-        <Card title='Overdue Statistics'>
-          <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{overdueStats.total}</div>
-              <div className={styles.statLabel}>Total Overdue</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{overdueStats.critical}</div>
-              <div className={styles.statLabel}>Critical (30+ days)</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{overdueStats.moderate}</div>
-              <div className={styles.statLabel}>Moderate (7-30 days)</div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statValue}>{overdueStats.mild}</div>
-              <div className={styles.statLabel}>Mild (1-7 days)</div>
-            </div>
+      <Card title='Overdue Statistics'>
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>{overdueStats.total}</div>
+            <div className={styles.statLabel}>Total Overdue</div>
           </div>
-        </Card>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>{overdueStats.critical}</div>
+            <div className={styles.statLabel}>Critical (30+ days)</div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>{overdueStats.moderate}</div>
+            <div className={styles.statLabel}>Moderate (7-30 days)</div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>{overdueStats.mild}</div>
+            <div className={styles.statLabel}>Mild (1-7 days)</div>
+          </div>
+        </div>
+      </Card>
 
-        <Card title='Overdue Items List'>
-          {error && (
-            <Alert type='error' message={error} onClose={() => setError('')} />
-          )}
+      <Card title='Overdue Items List'>
+        {error && <Alert type='error' message={error} onClose={() => setError('')} />}
 
-          {loading ? (
-            <div className={styles.loadingContainer}>
-              <div className={styles.loader}></div>
-              <p>Loading overdue items...</p>
-            </div>
-          ) : overdues.length === 0 ? (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>✅</div>
-              <h3>No Overdue Items</h3>
-              <p>All items are returned on time!</p>
-            </div>
-          ) : (
-            <>
-              <div className={styles.tableHeader}>
-                <div className={styles.tableInfo}>
-                  <span>
-                    Showing {startIndex + 1}-
-                    {Math.min(endIndex, overdues.length)} of {overdues.length}{' '}
-                    overdue items
-                  </span>
+        {loading ? (
+          <div className={styles.loadingContainer}>
+            <div className={styles.loader}></div>
+            <p>Loading overdue items...</p>
+          </div>
+        ) : filteredOverdues.length === 0 ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>Clear</div>
+            <h3>No Overdue Items</h3>
+            <p>All items are returned on time.</p>
+          </div>
+        ) : (
+          <>
+            <div className={styles.filtersSection}>
+              <div className={styles.filtersGrid}>
+                <Input
+                  label='Search Patron or Book'
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder='Search by patron name, patron barcode, title, or item barcode'
+                />
+                <div className={styles.filterActions}>
+                  <Button variant='secondary' onClick={() => setSearchTerm('')} disabled={!searchTerm}>
+                    Clear
+                  </Button>
+                  <Button variant='secondary' onClick={fetchOverdues} disabled={loading}>
+                    Refresh
+                  </Button>
                 </div>
+              </div>
+            </div>
+
+            <div className={styles.tableHeader}>
+              <div className={styles.tableInfo}>
+                <span>
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredOverdues.length)} of {filteredOverdues.length} overdue items
+                </span>
+              </div>
+            </div>
+
+            <Table columns={columns} data={currentOverdues} showPagination={false} />
+
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
                 <Button
                   variant='secondary'
-                  onClick={fetchOverdues}
-                  disabled={loading}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
                 >
-                  Refresh
+                  Previous
+                </Button>
+                <span className={styles.pageInfo}>
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant='secondary'
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
                 </Button>
               </div>
-
-              <Table columns={columns} data={currentOverdues} />
-
-              {totalPages > 1 && (
-                <div className={styles.pagination}>
-                  <Button
-                    variant='secondary'
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className={styles.pageInfo}>
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant='secondary'
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </Card>
-
-        <Card title='Actions'>
-          <div className={styles.actionList}>
-            <div className={styles.actionItem}>
-              <h4>Send Reminders</h4>
-              <p>Send email reminders to patrons with overdue items</p>
-              <Button variant='primary' className={styles.actionButton}>
-                Send Reminders
-              </Button>
-            </div>
-            <div className={styles.actionItem}>
-              <h4>Export Report</h4>
-              <p>Export overdue items report for management</p>
-              <Button variant='secondary' className={styles.actionButton}>
-                Export Report
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
+            )}
+          </>
+        )}
+      </Card>
     </div>
   );
 }

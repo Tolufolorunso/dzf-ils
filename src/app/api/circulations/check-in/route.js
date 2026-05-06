@@ -5,11 +5,24 @@ import Patron from '@/models/PatronModel';
 import Catalog from '@/models/CatalogingModel';
 import MonthlyActivity from '@/models/MonthlyActivityModel';
 import { delay } from '@/lib/utils';
+import { verifyAuth } from '@/lib/auth';
 
 export async function POST(request) {
   try {
     await dbConnect();
-    await delay(200); // ⏳ Optional small delay for UX
+    await delay(200);
+
+    const auth = await verifyAuth(request);
+    if (!auth.status) {
+      return NextResponse.json(
+        {
+          status: false,
+          message: auth.message,
+          logout: true,
+        },
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+      );
+    }
 
     const { patronBarcode, itemBarcode } = await request.json();
 
@@ -23,9 +36,8 @@ export async function POST(request) {
       );
     }
 
-    const point = 15; // Fixed 15 points for returning books
+    const point = 15;
 
-    // 🧭 Fetch patron and catalog item concurrently
     const [patron, catalogItem] = await Promise.all([
       Patron.findOne({ barcode: patronBarcode }),
       Catalog.findOne({ barcode: itemBarcode }),
@@ -45,7 +57,14 @@ export async function POST(request) {
       );
     }
 
-    // 🚫 Check if the item is currently checked out
+    const lastCheckout = catalogItem.patronsCheckedOutHistory?.at(-1);
+    const hasUnreturnedHistory =
+      lastCheckout?.barcode === patron.barcode && !lastCheckout?.returnedAt;
+
+    if (!catalogItem.isCheckedOut && hasUnreturnedHistory) {
+      catalogItem.isCheckedOut = true;
+    }
+
     if (!catalogItem.isCheckedOut) {
       return NextResponse.json(
         { status: false, message: 'Item is not checked out' },
@@ -53,26 +72,20 @@ export async function POST(request) {
       );
     }
 
-    // 🗓 Mark item as returned
     catalogItem.isCheckedOut = false;
 
-    // Update latest checkout record’s return date (if needed)
-    const lastCheckout = catalogItem.patronsCheckedOutHistory?.at(-1);
     if (lastCheckout && !lastCheckout.returnedAt) {
       lastCheckout.returnedAt = new Date();
     }
 
     await catalogItem.save();
 
-    // 🧾 Update patron’s borrowing state
     patron.hasBorrowedBook = false;
 
-    // Add a return record or update points
     if (point && Number(point) > 0) {
       patron.points = (patron.points || 0) + Number(point);
     }
 
-    // Optional: track event record for reading competition or reward
     patron.event.push({
       eventTitle: 'Book Check-in',
       points: Number(point) || 0,
@@ -81,7 +94,6 @@ export async function POST(request) {
 
     await patron.save();
 
-    // 📊 Update monthly activity for book return
     const currentDate = new Date();
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
@@ -106,7 +118,7 @@ export async function POST(request) {
     return NextResponse.json(
       {
         status: true,
-        message: 'Check-in successful ✅',
+        message: 'Check-in successful',
         data: {
           patron: `${patron.surname}, ${patron.firstname}`,
           item: catalogItem.title.mainTitle,

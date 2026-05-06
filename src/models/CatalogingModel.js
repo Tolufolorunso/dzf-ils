@@ -97,6 +97,7 @@ const CatalogingSchema = new mongoose.Schema(
         },
         checkedOutAt: { type: Date, default: null },
         dueDate: Date,
+        returnedAt: { type: Date, default: null },
         fullname: String,
         contactNumber: String,
         barcode: String,
