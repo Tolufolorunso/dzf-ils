@@ -647,8 +647,8 @@ export default function PatronDetailPage() {
         </Card>
 
         {/* Currently Borrowed Item */}
-        {patron.activeCheckout && (
-          <Card title='Currently Borrowed Item' className={styles.activeCheckoutCard}>
+        <Card title='Currently Borrowed Item' className={styles.activeCheckoutCard}>
+          {patron.activeCheckout ? (
             <div className={styles.activeCheckout}>
               <div className={styles.activeCheckoutHeader}>
                 <span className={styles.activeCheckoutTitle}>
@@ -662,8 +662,10 @@ export default function PatronDetailPage() {
                 <span><strong>Due:</strong> {formatDate(patron.activeCheckout.dueDate)}</span>
               </div>
             </div>
-          </Card>
-        )}
+          ) : (
+            <p className={styles.noHistory}>No book with this patron currently.</p>
+          )}
+        </Card>
 
         {/* Borrowing History */}
         <Card title='Borrowing History'>

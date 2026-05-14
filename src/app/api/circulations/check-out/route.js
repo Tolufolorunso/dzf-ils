@@ -28,7 +28,14 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { patronBarcode, itemBarcode, eventTitle, dueDay = 2 } = body;
+    const {
+      patronBarcode: rawPatronBarcode,
+      itemBarcode: rawItemBarcode,
+      eventTitle,
+      dueDay = 2,
+    } = body;
+    const patronBarcode = String(rawPatronBarcode || '').trim();
+    const itemBarcode = String(rawItemBarcode || '').trim();
 
     if (!patronBarcode || !itemBarcode) {
       return NextResponse.json(
@@ -108,7 +115,7 @@ export async function POST(request) {
       patronsCheckedOutHistory: {
         $elemMatch: {
           barcode: patron.barcode,
-          returnedAt: { $in: [null, undefined] },
+          returnedAt: null,
         },
       },
     });
@@ -131,16 +138,17 @@ export async function POST(request) {
     }
 
     // 🚫 Item availability check
-    const latestCheckout = catalog.patronsCheckedOutHistory?.at(-1);
-    const latestReturned = Boolean(latestCheckout?.returnedAt);
+    const activeCatalogLoan = [...(catalog.patronsCheckedOutHistory || [])]
+      .reverse()
+      .find((entry) => !entry.returnedAt);
 
-    // Self-heal stale catalog flag when latest checkout is already returned.
-    if (catalog.isCheckedOut && latestReturned) {
+    // Self-heal stale catalog flag when no active checkout exists in history.
+    if (catalog.isCheckedOut && !activeCatalogLoan) {
       catalog.isCheckedOut = false;
       await catalog.save();
     }
 
-    if (catalog.isCheckedOut) {
+    if (catalog.isCheckedOut || activeCatalogLoan) {
       return NextResponse.json(
         { status: false, message: 'Item is already checked out' },
         { status: StatusCodes.CONFLICT }
@@ -179,24 +187,18 @@ export async function POST(request) {
     catalog.isCheckedOut = true;
     await catalog.save();
 
-    // 📗 Update patron checkout info (prevent duplicate records)
-    const hasBorrowedBefore = patron.itemsCheckedOutHistory.some(
-      (item) => item.itemBarcode === catalog.barcode
-    );
-
-    if (!hasBorrowedBefore) {
-      patron.itemsCheckedOutHistory.push({
-        itemId: catalog._id,
-        checkoutDate: currentDate,
-        dueDate,
-        returnedAt: null,
-        itemTitle: catalog.title.mainTitle,
-        itemSubTitle: catalog.title.subtitle,
-        itemBarcode: catalog.barcode,
-        eventTitle,
-        event: true,
-      });
-    }
+    // Record each checkout transaction, including repeat borrows of same item.
+    patron.itemsCheckedOutHistory.push({
+      itemId: catalog._id,
+      checkoutDate: currentDate,
+      dueDate,
+      returnedAt: null,
+      itemTitle: catalog.title.mainTitle,
+      itemSubTitle: catalog.title.subtitle,
+      itemBarcode: catalog.barcode,
+      eventTitle,
+      event: true,
+    });
 
     patron.lastBorrowedItem = {
       itemId: catalog._id,
