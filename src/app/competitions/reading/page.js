@@ -272,11 +272,15 @@ export default function ReadingCompetitionPage() {
 
       const data = await response.json();
       if (!data.status) {
-        setControlError(data.message || 'Unable to update circulation controls.');
+        setControlError(
+          data.message || 'Unable to update circulation controls.',
+        );
         return;
       }
 
-      setControlSuccess(data.message || 'Competition circulation controls updated.');
+      setControlSuccess(
+        data.message || 'Competition circulation controls updated.',
+      );
       fetchCompetitionData({ background: true });
     } catch (error) {
       console.error('Competition control update error:', error);
@@ -396,7 +400,7 @@ export default function ReadingCompetitionPage() {
             </section>
 
             <section className={styles.formsGrid}>
-              <Card title='Competition Circulation Controls'>
+              {/* <Card title='Competition Circulation Controls'>
                 {controlError && (
                   <Alert
                     type='error'
@@ -414,7 +418,11 @@ export default function ReadingCompetitionPage() {
                 <div className={styles.formActions}>
                   <Button
                     type='button'
-                    variant={circulationControls.checkoutEnabled ? 'secondary' : 'primary'}
+                    variant={
+                      circulationControls.checkoutEnabled
+                        ? 'secondary'
+                        : 'primary'
+                    }
                     onClick={() =>
                       updateCirculationControls({
                         checkoutEnabled: !circulationControls.checkoutEnabled,
@@ -428,7 +436,11 @@ export default function ReadingCompetitionPage() {
                   </Button>
                   <Button
                     type='button'
-                    variant={circulationControls.checkinEnabled ? 'secondary' : 'primary'}
+                    variant={
+                      circulationControls.checkinEnabled
+                        ? 'secondary'
+                        : 'primary'
+                    }
                     onClick={() =>
                       updateCirculationControls({
                         checkinEnabled: !circulationControls.checkinEnabled,
@@ -441,7 +453,7 @@ export default function ReadingCompetitionPage() {
                       : 'Enable Competition Check-in'}
                   </Button>
                 </div>
-              </Card>
+              </Card> */}
 
               <Card title='Competition Check-out'>
                 <form onSubmit={submitCheckout} className={styles.form}>
@@ -478,7 +490,7 @@ export default function ReadingCompetitionPage() {
                   />
 
                   <div className={styles.formActions}>
-                    <Button
+                    {/* <Button
                       type='submit'
                       variant='primary'
                       disabled={checkoutLoading || !circulationControls.checkoutEnabled}
@@ -500,7 +512,7 @@ export default function ReadingCompetitionPage() {
                       disabled={checkoutLoading}
                     >
                       Clear
-                    </Button>
+                    </Button> */}
                   </div>
                 </form>
               </Card>
@@ -577,10 +589,12 @@ export default function ReadingCompetitionPage() {
                   />
 
                   <div className={styles.formActions}>
-                    <Button
+                    {/* <Button
                       type='submit'
                       variant='primary'
-                      disabled={checkinLoading || !circulationControls.checkinEnabled}
+                      disabled={
+                        checkinLoading || !circulationControls.checkinEnabled
+                      }
                     >
                       {checkinLoading
                         ? 'Recording check-in...'
@@ -601,7 +615,7 @@ export default function ReadingCompetitionPage() {
                       disabled={false}
                     >
                       Clear
-                    </Button>
+                    </Button> */}
                   </div>
                 </form>
               </Card>
@@ -909,7 +923,7 @@ export default function ReadingCompetitionPage() {
                   </div>
                 )}
               </Card>
-            </section> 
+            </section>
           </>
         )}
       </main>
