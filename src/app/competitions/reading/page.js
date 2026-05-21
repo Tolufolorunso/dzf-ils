@@ -71,9 +71,6 @@ export default function ReadingCompetitionPage() {
   const [checkinSuccess, setCheckinSuccess] = useState('');
   const [classError, setClassError] = useState('');
   const [classSuccess, setClassSuccess] = useState('');
-  const [controlLoading, setControlLoading] = useState(false);
-  const [controlError, setControlError] = useState('');
-  const [controlSuccess, setControlSuccess] = useState('');
 
   useEffect(() => {
     fetchCompetitionData();
@@ -253,42 +250,6 @@ export default function ReadingCompetitionPage() {
     }
   };
 
-  const updateCirculationControls = async (payload) => {
-    setControlLoading(true);
-    setControlError('');
-    setControlSuccess('');
-
-    try {
-      const response = await fetch('/api/competition', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'setcirculationcontrols',
-          ...payload,
-        }),
-      });
-
-      const data = await response.json();
-      if (!data.status) {
-        setControlError(
-          data.message || 'Unable to update circulation controls.',
-        );
-        return;
-      }
-
-      setControlSuccess(
-        data.message || 'Competition circulation controls updated.',
-      );
-      fetchCompetitionData({ background: true });
-    } catch (error) {
-      console.error('Competition control update error:', error);
-      setControlError('Network error. Please try again.');
-    } finally {
-      setControlLoading(false);
-    }
-  };
 
   const stats = competitionData?.stats;
   const session = competitionData?.session;
@@ -400,61 +361,6 @@ export default function ReadingCompetitionPage() {
             </section>
 
             <section className={styles.formsGrid}>
-              {/* <Card title='Competition Circulation Controls'>
-                {controlError && (
-                  <Alert
-                    type='error'
-                    message={controlError}
-                    onClose={() => setControlError('')}
-                  />
-                )}
-                {controlSuccess && (
-                  <Alert
-                    type='success'
-                    message={controlSuccess}
-                    onClose={() => setControlSuccess('')}
-                  />
-                )}
-                <div className={styles.formActions}>
-                  <Button
-                    type='button'
-                    variant={
-                      circulationControls.checkoutEnabled
-                        ? 'secondary'
-                        : 'primary'
-                    }
-                    onClick={() =>
-                      updateCirculationControls({
-                        checkoutEnabled: !circulationControls.checkoutEnabled,
-                      })
-                    }
-                    disabled={controlLoading}
-                  >
-                    {circulationControls.checkoutEnabled
-                      ? 'Disable Competition Checkout'
-                      : 'Enable Competition Checkout'}
-                  </Button>
-                  <Button
-                    type='button'
-                    variant={
-                      circulationControls.checkinEnabled
-                        ? 'secondary'
-                        : 'primary'
-                    }
-                    onClick={() =>
-                      updateCirculationControls({
-                        checkinEnabled: !circulationControls.checkinEnabled,
-                      })
-                    }
-                    disabled={controlLoading}
-                  >
-                    {circulationControls.checkinEnabled
-                      ? 'Disable Competition Check-in'
-                      : 'Enable Competition Check-in'}
-                  </Button>
-                </div>
-              </Card> */}
-
               <Card title='Competition Check-out'>
                 <form onSubmit={submitCheckout} className={styles.form}>
                   {checkoutError && (
@@ -490,10 +396,12 @@ export default function ReadingCompetitionPage() {
                   />
 
                   <div className={styles.formActions}>
-                    {/* <Button
+                    <Button
                       type='submit'
                       variant='primary'
-                      disabled={checkoutLoading || !circulationControls.checkoutEnabled}
+                      disabled={
+                        checkoutLoading || !circulationControls.checkoutEnabled
+                      }
                     >
                       {checkoutLoading
                         ? 'Recording checkout...'
@@ -512,7 +420,7 @@ export default function ReadingCompetitionPage() {
                       disabled={checkoutLoading}
                     >
                       Clear
-                    </Button> */}
+                    </Button>
                   </div>
                 </form>
               </Card>
@@ -589,7 +497,7 @@ export default function ReadingCompetitionPage() {
                   />
 
                   <div className={styles.formActions}>
-                    {/* <Button
+                    <Button
                       type='submit'
                       variant='primary'
                       disabled={
@@ -606,16 +514,14 @@ export default function ReadingCompetitionPage() {
                       type='button'
                       variant='secondary'
                       onClick={() => {
-                        // setCheckinForm(initialCheckinForm);
+                        setCheckinForm(initialCheckinForm);
                         setCheckinError('');
                         setCheckinSuccess('');
                       }}
-                      // disabled={checkinLoading}
-
-                      disabled={false}
+                      disabled={checkinLoading}
                     >
                       Clear
-                    </Button> */}
+                    </Button>
                   </div>
                 </form>
               </Card>

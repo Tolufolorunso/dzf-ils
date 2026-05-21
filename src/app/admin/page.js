@@ -21,6 +21,7 @@ function AdminDashboardContent() {
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState('');
   const [pageSuccess, setPageSuccess] = useState('');
+  const [controlSubmitting, setControlSubmitting] = useState(false);
 
   const [overrideLoading, setOverrideLoading] = useState(false);
   const [overrideError, setOverrideError] = useState('');
@@ -100,6 +101,37 @@ function AdminDashboardContent() {
       setPageError('Network error. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleCompetitionControlUpdate = async (payload) => {
+    try {
+      setControlSubmitting(true);
+      setPageError('');
+      setPageSuccess('');
+
+      const response = await fetch('/api/competition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'setcirculationcontrols',
+          ...payload,
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.status) {
+        setPageError(data.message || 'Failed to update competition controls.');
+        return;
+      }
+
+      setPageSuccess(data.message || 'Competition controls updated.');
+      fetchAdminData({ background: true });
+    } catch (error) {
+      console.error('Competition controls update error:', error);
+      setPageError('Network error. Please try again.');
+    } finally {
+      setControlSubmitting(false);
     }
   };
 
@@ -207,6 +239,10 @@ function AdminDashboardContent() {
   const session = competitionData?.session;
   const publication = competitionData?.resultPublication;
   const isPublished = Boolean(publication?.isPublished);
+  const circulationControls = competitionData?.circulationControls || {
+    checkoutEnabled: true,
+    checkinEnabled: true,
+  };
 
   return (
     <div className={styles.page}>
@@ -240,6 +276,57 @@ function AdminDashboardContent() {
             </section>
 
             <section className={styles.grid}>
+              <Card title='Competition Circulation Controls'>
+                <div className={styles.controlPanel}>
+                  <div className={styles.metaList}>
+                    <div className={styles.metaRow}>
+                      <span>Checkout API + Staff Form</span>
+                      <strong>
+                        {circulationControls.checkoutEnabled
+                          ? 'Enabled'
+                          : 'Disabled'}
+                      </strong>
+                    </div>
+                    <div className={styles.metaRow}>
+                      <span>Check-in API + Staff Form</span>
+                      <strong>
+                        {circulationControls.checkinEnabled
+                          ? 'Enabled'
+                          : 'Disabled'}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className={styles.actions}>
+                    <Button
+                      variant='secondary'
+                      onClick={() =>
+                        handleCompetitionControlUpdate({
+                          checkoutEnabled: !circulationControls.checkoutEnabled,
+                        })
+                      }
+                      disabled={controlSubmitting}
+                    >
+                      {circulationControls.checkoutEnabled
+                        ? 'Disable Checkout'
+                        : 'Enable Checkout'}
+                    </Button>
+                    <Button
+                      variant='secondary'
+                      onClick={() =>
+                        handleCompetitionControlUpdate({
+                          checkinEnabled: !circulationControls.checkinEnabled,
+                        })
+                      }
+                      disabled={controlSubmitting}
+                    >
+                      {circulationControls.checkinEnabled
+                        ? 'Disable Check-in'
+                        : 'Enable Check-in'}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
               <Card title='Reading Result Visibility'>
                 <div className={styles.controlPanel}>
                   <div className={styles.statusCard}>

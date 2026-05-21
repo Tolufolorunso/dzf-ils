@@ -12,6 +12,7 @@ import {
 } from '@/lib/cohort-utils';
 
 const ALLOWED_COHORT_ROLES = ['ict', 'admin', 'asst_admin', 'ima'];
+let hasEnsuredCohortIndexes = false;
 
 function getStaffName(user) {
   return user?.name?.trim() || user?.username?.trim() || 'Staff';
@@ -58,13 +59,35 @@ async function ensureDefaultCohortGroups(staffName = 'System') {
             updatedBy: staffName,
           },
         },
-        { upsert: true, new: true }
-      )
-    )
+        { upsert: true, new: true },
+      ),
+    ),
   );
 }
 
 async function prepareCohortData(staffName = 'System') {
+  if (!hasEnsuredCohortIndexes) {
+    try {
+      await Cohort.collection.dropIndex('barcode_1');
+    } catch (error) {
+      const ignorableErrors = [
+        'index not found',
+        'ns not found',
+        'IndexNotFound',
+      ];
+      const message = String(error?.message || '');
+      const shouldIgnore = ignorableErrors.some((text) =>
+        message.toLowerCase().includes(text.toLowerCase()),
+      );
+      if (!shouldIgnore) {
+        throw error;
+      }
+    }
+
+    await Cohort.syncIndexes();
+    hasEnsuredCohortIndexes = true;
+  }
+
   await ensureDefaultCohortGroups(staffName);
 }
 
@@ -88,12 +111,12 @@ async function cohortTypeExists(cohortType) {
 
 async function buildCohortPayload(selectedCohortType = 'all') {
   const selectedType =
-    selectedCohortType === 'all' ? 'all' : getCohortTypeValue(selectedCohortType) || 'all';
+    selectedCohortType === 'all'
+      ? 'all'
+      : getCohortTypeValue(selectedCohortType) || 'all';
 
   const [groups, activeStudents, totalStudents] = await Promise.all([
-    CohortGroup.find({ active: true })
-      .sort({ order: 1, cohortType: 1 })
-      .lean(),
+    CohortGroup.find({ active: true }).sort({ order: 1, cohortType: 1 }).lean(),
     Cohort.find({ active: { $ne: false } })
       .sort({ cohortType: 1, surname: 1, firstname: 1 })
       .lean(),
@@ -112,7 +135,7 @@ async function buildCohortPayload(selectedCohortType = 'all') {
   });
 
   const groupMap = new Map(
-    groups.map((group) => [getCohortTypeValue(group.cohortType), group])
+    groups.map((group) => [getCohortTypeValue(group.cohortType), group]),
   );
 
   cohortCountMap.forEach((studentCount, cohortType) => {
@@ -133,7 +156,7 @@ async function buildCohortPayload(selectedCohortType = 'all') {
       return (
         Number(left.order || 100) - Number(right.order || 100) ||
         getCohortTypeValue(left.cohortType).localeCompare(
-          getCohortTypeValue(right.cohortType)
+          getCohortTypeValue(right.cohortType),
         )
       );
     })
@@ -153,7 +176,7 @@ async function buildCohortPayload(selectedCohortType = 'all') {
     selectedType === 'all'
       ? activeStudents
       : activeStudents.filter(
-          (student) => getCohortTypeValue(student.cohortType) === selectedType
+          (student) => getCohortTypeValue(student.cohortType) === selectedType,
         );
 
   const students = selectedStudents.map((student) => ({
@@ -184,8 +207,10 @@ async function buildCohortPayload(selectedCohortType = 'all') {
 
   const largestCohort = breakdown.reduce(
     (largest, current) =>
-      !largest || current.studentCount > largest.studentCount ? current : largest,
-    null
+      !largest || current.studentCount > largest.studentCount
+        ? current
+        : largest,
+    null,
   );
 
   return {
@@ -212,7 +237,8 @@ async function buildCohortPayload(selectedCohortType = 'all') {
       totalStudents,
       displayedStudents: students.length,
       totalCohorts: breakdown.length,
-      cohortsWithStudents: breakdown.filter((item) => item.studentCount > 0).length,
+      cohortsWithStudents: breakdown.filter((item) => item.studentCount > 0)
+        .length,
       emptyCohorts: breakdown.filter((item) => item.studentCount === 0).length,
       totalAttendanceEntries,
       largestCohort,
@@ -228,7 +254,7 @@ async function handleCreateCohort(body, user) {
   if (!cohortType) {
     return NextResponse.json(
       { status: false, message: 'Cohort type is required.' },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -237,7 +263,7 @@ async function handleCreateCohort(body, user) {
   if (existingGroup?.active) {
     return NextResponse.json(
       { status: false, message: 'That cohort already exists.' },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -257,7 +283,7 @@ async function handleCreateCohort(body, user) {
           displayName: existingGroup.displayName,
         },
       },
-      { status: StatusCodes.OK }
+      { status: StatusCodes.OK },
     );
   }
 
@@ -281,7 +307,7 @@ async function handleCreateCohort(body, user) {
         displayName: group.displayName,
       },
     },
-    { status: StatusCodes.CREATED }
+    { status: StatusCodes.CREATED },
   );
 }
 
@@ -298,31 +324,19 @@ async function handleAddStudent(body) {
         status: false,
         message: 'Barcode, firstname, surname, and cohort type are required.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
-  const exists = await cohortTypeExists(cohortType);
-
-  if (!exists) {
-    return NextResponse.json(
-      {
-        status: false,
-        message: 'Create the cohort first before adding students to it.',
-      },
-      { status: StatusCodes.BAD_REQUEST }
-    );
-  }
-
-  const existingStudent = await Cohort.findOne({ barcode });
+  const existingStudent = await Cohort.findOne({ barcode, cohortType });
 
   if (existingStudent?.active) {
     return NextResponse.json(
       {
         status: false,
-        message: 'A cohort student with that barcode already exists.',
+        message: 'This patron is already in the selected cohort.',
       },
-      { status: StatusCodes.CONFLICT }
+      { status: StatusCodes.CONFLICT },
     );
   }
 
@@ -345,7 +359,7 @@ async function handleAddStudent(body) {
           cohortType: existingStudent.cohortType,
         },
       },
-      { status: StatusCodes.OK }
+      { status: StatusCodes.OK },
     );
   }
 
@@ -368,7 +382,7 @@ async function handleAddStudent(body) {
         cohortType: student.cohortType,
       },
     },
-    { status: StatusCodes.CREATED }
+    { status: StatusCodes.CREATED },
   );
 }
 
@@ -382,7 +396,7 @@ async function handleMoveStudent(body) {
         status: false,
         message: 'Student barcode and target cohort are required.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -390,7 +404,7 @@ async function handleMoveStudent(body) {
   if (!exists) {
     return NextResponse.json(
       { status: false, message: 'Target cohort does not exist.' },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -399,7 +413,7 @@ async function handleMoveStudent(body) {
   if (!student) {
     return NextResponse.json(
       { status: false, message: 'Active cohort student not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
@@ -416,7 +430,7 @@ async function handleMoveStudent(body) {
         cohortType: student.cohortType,
       },
     },
-    { status: StatusCodes.OK }
+    { status: StatusCodes.OK },
   );
 }
 
@@ -432,7 +446,7 @@ async function handleRenameCohort(body, user) {
         status: false,
         message: 'Current cohort type and new cohort type are required.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -447,14 +461,14 @@ async function handleRenameCohort(body, user) {
   if (!currentGroup && affectedStudents === 0) {
     return NextResponse.json(
       { status: false, message: 'Current cohort type was not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
   if (currentCohortType !== newCohortType) {
     await Cohort.collection.updateMany(
       { cohortType: currentCohortType },
-      { $set: { cohortType: newCohortType } }
+      { $set: { cohortType: newCohortType } },
     );
   }
 
@@ -472,7 +486,7 @@ async function handleRenameCohort(body, user) {
             active: true,
             updatedAt: new Date(),
           },
-        }
+        },
       );
       await CohortGroup.collection.deleteOne({ _id: currentGroup._id });
     } else {
@@ -487,7 +501,7 @@ async function handleRenameCohort(body, user) {
             active: true,
             updatedAt: new Date(),
           },
-        }
+        },
       );
     }
   } else if (!targetGroup) {
@@ -516,7 +530,7 @@ async function handleRenameCohort(body, user) {
         affectedStudents,
       },
     },
-    { status: StatusCodes.OK }
+    { status: StatusCodes.OK },
   );
 }
 
@@ -526,7 +540,7 @@ async function handleRemoveStudent(body) {
   if (!barcode) {
     return NextResponse.json(
       { status: false, message: 'Student barcode is required.' },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   }
 
@@ -535,7 +549,7 @@ async function handleRemoveStudent(body) {
   if (!student) {
     return NextResponse.json(
       { status: false, message: 'Active cohort student not found.' },
-      { status: StatusCodes.NOT_FOUND }
+      { status: StatusCodes.NOT_FOUND },
     );
   }
 
@@ -552,7 +566,7 @@ async function handleRemoveStudent(body) {
         fullName: buildFullName(student),
       },
     },
-    { status: StatusCodes.OK }
+    { status: StatusCodes.OK },
   );
 }
 
@@ -564,7 +578,7 @@ export async function GET(request) {
     if (!auth.status) {
       return NextResponse.json(
         { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
       );
     }
 
@@ -575,7 +589,7 @@ export async function GET(request) {
           message:
             'Only ICT, admin, assistant admin, and IMA staff can view cohorts.',
         },
-        { status: StatusCodes.FORBIDDEN }
+        { status: StatusCodes.FORBIDDEN },
       );
     }
 
@@ -591,7 +605,7 @@ export async function GET(request) {
         message: 'Cohort data fetched successfully.',
         data,
       },
-      { status: StatusCodes.OK }
+      { status: StatusCodes.OK },
     );
   } catch (error) {
     console.error('Cohort fetch error:', error);
@@ -602,7 +616,7 @@ export async function GET(request) {
         error:
           process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR }
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 }
@@ -615,7 +629,7 @@ export async function POST(request) {
     if (!auth.status) {
       return NextResponse.json(
         { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
       );
     }
 
@@ -626,7 +640,7 @@ export async function POST(request) {
           message:
             'Only ICT, admin, assistant admin, and IMA staff can manage cohorts.',
         },
-        { status: StatusCodes.FORBIDDEN }
+        { status: StatusCodes.FORBIDDEN },
       );
     }
 
@@ -648,7 +662,7 @@ export async function POST(request) {
         status: false,
         message: 'Invalid action. Use createcohort or addstudent.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   } catch (error) {
     console.error('Cohort create error:', error);
@@ -659,7 +673,7 @@ export async function POST(request) {
         error:
           process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR }
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 }
@@ -672,7 +686,7 @@ export async function PATCH(request) {
     if (!auth.status) {
       return NextResponse.json(
         { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
       );
     }
 
@@ -683,7 +697,7 @@ export async function PATCH(request) {
           message:
             'Only ICT, admin, assistant admin, and IMA staff can manage cohorts.',
         },
-        { status: StatusCodes.FORBIDDEN }
+        { status: StatusCodes.FORBIDDEN },
       );
     }
 
@@ -705,7 +719,7 @@ export async function PATCH(request) {
         status: false,
         message: 'Invalid action. Use movestudent or renamecohort.',
       },
-      { status: StatusCodes.BAD_REQUEST }
+      { status: StatusCodes.BAD_REQUEST },
     );
   } catch (error) {
     console.error('Cohort update error:', error);
@@ -716,7 +730,7 @@ export async function PATCH(request) {
         error:
           process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR }
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 }
@@ -729,7 +743,7 @@ export async function DELETE(request) {
     if (!auth.status) {
       return NextResponse.json(
         { status: false, message: auth.message, logout: true },
-        { status: auth.statusCode || StatusCodes.UNAUTHORIZED }
+        { status: auth.statusCode || StatusCodes.UNAUTHORIZED },
       );
     }
 
@@ -740,7 +754,7 @@ export async function DELETE(request) {
           message:
             'Only ICT, admin, assistant admin, and IMA staff can manage cohorts.',
         },
-        { status: StatusCodes.FORBIDDEN }
+        { status: StatusCodes.FORBIDDEN },
       );
     }
 
@@ -757,7 +771,7 @@ export async function DELETE(request) {
         error:
           process.env.NODE_ENV === 'development' ? error.message : undefined,
       },
-      { status: StatusCodes.INTERNAL_SERVER_ERROR }
+      { status: StatusCodes.INTERNAL_SERVER_ERROR },
     );
   }
 }

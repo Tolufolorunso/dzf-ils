@@ -369,7 +369,16 @@ export default function CohortsPage() {
 
   const stats = cohortData?.stats;
   const cohorts = cohortData?.cohorts || [];
-  const students = cohortData?.students || [];
+  const students = useMemo(() => cohortData?.students || [], [cohortData?.students]);
+  const filteredStudents = useMemo(() => {
+    if (selectedCohortType === 'all') {
+      return students;
+    }
+
+    return students.filter(
+      (student) => student.cohortType === selectedCohortType
+    );
+  }, [students, selectedCohortType]);
   const allCohortTypes = cohortData?.allCohortTypes || [];
   const previewType =
     allCohortTypes.find((item) => item.cohortType === selectedTypePreview) ||
@@ -730,7 +739,7 @@ export default function CohortsPage() {
 
             <section className={styles.directorySection}>
               <Card title='Cohort Students'>
-                {students.length === 0 ? (
+                {filteredStudents.length === 0 ? (
                   <div className={styles.emptyState}>
                     <p>No students found for the selected cohort view.</p>
                   </div>
@@ -738,7 +747,7 @@ export default function CohortsPage() {
                   <>
                     <div className={styles.viewToolbar}>
                       <div className={styles.viewSummary}>
-                        <strong>{students.length}</strong>
+                        <strong>{filteredStudents.length}</strong>
                         <span>students in this view</span>
                       </div>
                       <div className={styles.viewActions}>
@@ -763,7 +772,7 @@ export default function CohortsPage() {
                           : styles.studentList
                       }
                     >
-                    {students.map((student) => (
+                    {filteredStudents.map((student) => (
                       <div
                         key={student.id}
                         className={

@@ -5,7 +5,6 @@ const CohortSchema = new mongoose.Schema(
     barcode: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     firstname: {
@@ -43,5 +42,6 @@ const CohortSchema = new mongoose.Schema(
 
 CohortSchema.index({ cohortType: 1, active: 1 });
 CohortSchema.index({ barcode: 1, active: 1 });
+CohortSchema.index({ barcode: 1, cohortType: 1 }, { unique: true });
 
 export default mongoose.models.Cohort || mongoose.model('Cohort', CohortSchema);
