@@ -103,6 +103,14 @@ function hasResultAdminAccess(user) {
   return user?.role === 'admin';
 }
 
+function getCirculationControlState(library) {
+  const controls = library?.competitionDetails?.circulationControls || {};
+  return {
+    checkoutEnabled: controls.checkoutEnabled !== false,
+    checkinEnabled: controls.checkinEnabled !== false,
+  };
+}
+
 function formatPatronName(patron) {
   return `${patron.surname}, ${patron.firstname} ${patron.middlename || ''}`.trim();
 }
@@ -273,6 +281,8 @@ function rankLeaderboard(entries) {
 async function buildCompetitionData() {
   const session = await getSessionMeta();
   const resultPublication = await getResultPublicationState();
+  const library = await findCompetitionLibrary();
+  const circulationControls = getCirculationControlState(library);
 
   const records = await Competition.find({
     competitionType: COMPETITION_TYPE,
@@ -474,6 +484,7 @@ async function buildCompetitionData() {
   return {
     session,
     resultPublication,
+    circulationControls,
     stats: {
       totalParticipants: participantMap.size,
       totalBooksLogged: records.length,
@@ -500,6 +511,60 @@ async function buildCompetitionData() {
       )
       .slice(0, 10),
   };
+}
+
+async function handleCirculationControlUpdate(body, user) {
+  if (!hasResultAdminAccess(user)) {
+    return NextResponse.json(
+      {
+        status: false,
+        message:
+          'Only admin can enable or disable competition checkout and check-in.',
+      },
+      { status: StatusCodes.FORBIDDEN },
+    );
+  }
+
+  const library = await findCompetitionLibrary();
+  if (!library) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: 'No library configuration was found for competition settings.',
+      },
+      { status: StatusCodes.NOT_FOUND },
+    );
+  }
+
+  if (!library.competitionDetails) {
+    library.competitionDetails = {};
+  }
+
+  if (!library.competitionDetails.circulationControls) {
+    library.competitionDetails.circulationControls = {};
+  }
+
+  if (typeof body.checkoutEnabled === 'boolean') {
+    library.competitionDetails.circulationControls.checkoutEnabled =
+      body.checkoutEnabled;
+  }
+
+  if (typeof body.checkinEnabled === 'boolean') {
+    library.competitionDetails.circulationControls.checkinEnabled =
+      body.checkinEnabled;
+  }
+
+  await library.save();
+
+  const controls = getCirculationControlState(library);
+  return NextResponse.json(
+    {
+      status: true,
+      message: 'Competition circulation controls updated.',
+      data: controls,
+    },
+    { status: StatusCodes.OK },
+  );
 }
 
 async function handleCheckout(body, user) {
@@ -989,12 +1054,34 @@ export async function POST(request) {
 
     const body = await request.json();
     const action = cleanText(body.action).toLowerCase();
+    const library = await findCompetitionLibrary();
+    const circulationControls = getCirculationControlState(library);
 
     if (action === 'checkout') {
+      if (!circulationControls.checkoutEnabled) {
+        return NextResponse.json(
+          {
+            status: false,
+            message:
+              'Competition checkout is currently disabled by the administrator.',
+          },
+          { status: StatusCodes.FORBIDDEN },
+        );
+      }
       return handleCheckout(body, auth.user);
     }
 
     if (action === 'checkin') {
+      if (!circulationControls.checkinEnabled) {
+        return NextResponse.json(
+          {
+            status: false,
+            message:
+              'Competition check-in is currently disabled by the administrator.',
+          },
+          { status: StatusCodes.FORBIDDEN },
+        );
+      }
       return handleCheckin(body, auth.user);
     }
 
@@ -1006,11 +1093,15 @@ export async function POST(request) {
       return handleResultPublicationUpdate(body, auth.user);
     }
 
+    if (action === 'setcirculationcontrols') {
+      return handleCirculationControlUpdate(body, auth.user);
+    }
+
     return NextResponse.json(
       {
         status: false,
         message:
-          'Invalid competition action. Use checkout, checkin, updateclass, or setresultpublication.',
+          'Invalid competition action. Use checkout, checkin, updateclass, setresultpublication, or setcirculationcontrols.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );

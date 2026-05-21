@@ -71,6 +71,9 @@ export default function ReadingCompetitionPage() {
   const [checkinSuccess, setCheckinSuccess] = useState('');
   const [classError, setClassError] = useState('');
   const [classSuccess, setClassSuccess] = useState('');
+  const [controlLoading, setControlLoading] = useState(false);
+  const [controlError, setControlError] = useState('');
+  const [controlSuccess, setControlSuccess] = useState('');
 
   useEffect(() => {
     fetchCompetitionData();
@@ -250,6 +253,39 @@ export default function ReadingCompetitionPage() {
     }
   };
 
+  const updateCirculationControls = async (payload) => {
+    setControlLoading(true);
+    setControlError('');
+    setControlSuccess('');
+
+    try {
+      const response = await fetch('/api/competition', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'setcirculationcontrols',
+          ...payload,
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.status) {
+        setControlError(data.message || 'Unable to update circulation controls.');
+        return;
+      }
+
+      setControlSuccess(data.message || 'Competition circulation controls updated.');
+      fetchCompetitionData({ background: true });
+    } catch (error) {
+      console.error('Competition control update error:', error);
+      setControlError('Network error. Please try again.');
+    } finally {
+      setControlLoading(false);
+    }
+  };
+
   const stats = competitionData?.stats;
   const session = competitionData?.session;
   const leaderboard = competitionData?.leaderboard || [];
@@ -259,6 +295,10 @@ export default function ReadingCompetitionPage() {
     competitionData?.uncategorizedLeaderboard || [];
   const activeCheckouts = competitionData?.activeCheckouts || [];
   const recentCheckins = competitionData?.recentCheckins || [];
+  const circulationControls = competitionData?.circulationControls || {
+    checkoutEnabled: true,
+    checkinEnabled: true,
+  };
 
   return (
     <div className={styles.page}>
@@ -356,6 +396,53 @@ export default function ReadingCompetitionPage() {
             </section>
 
             <section className={styles.formsGrid}>
+              <Card title='Competition Circulation Controls'>
+                {controlError && (
+                  <Alert
+                    type='error'
+                    message={controlError}
+                    onClose={() => setControlError('')}
+                  />
+                )}
+                {controlSuccess && (
+                  <Alert
+                    type='success'
+                    message={controlSuccess}
+                    onClose={() => setControlSuccess('')}
+                  />
+                )}
+                <div className={styles.formActions}>
+                  <Button
+                    type='button'
+                    variant={circulationControls.checkoutEnabled ? 'secondary' : 'primary'}
+                    onClick={() =>
+                      updateCirculationControls({
+                        checkoutEnabled: !circulationControls.checkoutEnabled,
+                      })
+                    }
+                    disabled={controlLoading}
+                  >
+                    {circulationControls.checkoutEnabled
+                      ? 'Disable Competition Checkout'
+                      : 'Enable Competition Checkout'}
+                  </Button>
+                  <Button
+                    type='button'
+                    variant={circulationControls.checkinEnabled ? 'secondary' : 'primary'}
+                    onClick={() =>
+                      updateCirculationControls({
+                        checkinEnabled: !circulationControls.checkinEnabled,
+                      })
+                    }
+                    disabled={controlLoading}
+                  >
+                    {circulationControls.checkinEnabled
+                      ? 'Disable Competition Check-in'
+                      : 'Enable Competition Check-in'}
+                  </Button>
+                </div>
+              </Card>
+
               <Card title='Competition Check-out'>
                 <form onSubmit={submitCheckout} className={styles.form}>
                   {checkoutError && (
@@ -394,11 +481,13 @@ export default function ReadingCompetitionPage() {
                     <Button
                       type='submit'
                       variant='primary'
-                      disabled={checkoutLoading}
+                      disabled={checkoutLoading || !circulationControls.checkoutEnabled}
                     >
                       {checkoutLoading
                         ? 'Recording checkout...'
-                        : 'Record Competition Checkout'}
+                        : circulationControls.checkoutEnabled
+                          ? 'Record Competition Checkout'
+                          : 'Competition Checkout Disabled'}
                     </Button>
                     <Button
                       type='button'
@@ -491,11 +580,13 @@ export default function ReadingCompetitionPage() {
                     <Button
                       type='submit'
                       variant='primary'
-                      disabled={checkinLoading}
+                      disabled={checkinLoading || !circulationControls.checkinEnabled}
                     >
                       {checkinLoading
                         ? 'Recording check-in...'
-                        : 'Check In and Grade'}
+                        : circulationControls.checkinEnabled
+                          ? 'Check In and Grade'
+                          : 'Competition Check-in Disabled'}
                     </Button>
                     <Button
                       type='button'
