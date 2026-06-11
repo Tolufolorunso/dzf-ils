@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { StatusCodes } from 'http-status-codes';
-import { cookies } from 'next/headers';
 import { dbConnect } from '@/lib/dbConnect';
 import Patron from '@/models/PatronModel';
 import Catalog from '@/models/CatalogingModel';
@@ -78,12 +77,11 @@ export async function POST(request) {
     }
 
     // 🚫 Validate patron eligibility
-    if (!patron.image_url || !patron.image_url.public_id) {
+    if (patron.image_url && !patron.image_url.public_id) {
       return NextResponse.json(
         {
           status: false,
-          message:
-            'You must upload a passport photograph before borrowing books',
+          message: 'You have not taken your passport photography',
         },
         { status: StatusCodes.FORBIDDEN }
       );
@@ -112,12 +110,8 @@ export async function POST(request) {
 
     const hasActiveCheckout = await Catalog.exists({
       isCheckedOut: true,
-      patronsCheckedOutHistory: {
-        $elemMatch: {
-          barcode: patron.barcode,
-          returnedAt: null,
-        },
-      },
+      checkedOutBy: patron._id,
+      checkedOutAt: { $ne: null },
     });
 
     // Self-heal stale patron flag when no active loan exists for this patron.
@@ -137,18 +131,24 @@ export async function POST(request) {
       );
     }
 
-    // 🚫 Item availability check
-    const activeCatalogLoan = [...(catalog.patronsCheckedOutHistory || [])]
-      .reverse()
-      .find((entry) => !entry.returnedAt);
+    const catalogHasCurrentCheckout = Boolean(
+      catalog.isCheckedOut && catalog.checkedOutBy && catalog.checkedOutAt,
+    );
 
-    // Self-heal stale catalog flag when no active checkout exists in history.
-    if (catalog.isCheckedOut && !activeCatalogLoan) {
+    if (catalog.isCheckedOut && !catalogHasCurrentCheckout) {
       catalog.isCheckedOut = false;
+      catalog.checkedOutBy = null;
+      catalog.checkedOutAt = null;
       await catalog.save();
     }
 
-    if (catalog.isCheckedOut || activeCatalogLoan) {
+    if (!catalog.isCheckedOut && (catalog.checkedOutBy || catalog.checkedOutAt)) {
+      catalog.checkedOutBy = null;
+      catalog.checkedOutAt = null;
+      await catalog.save();
+    }
+
+    if (catalogHasCurrentCheckout) {
       return NextResponse.json(
         { status: false, message: 'Item is already checked out' },
         { status: StatusCodes.CONFLICT }
@@ -185,6 +185,8 @@ export async function POST(request) {
       returnedAt: null,
     };
     catalog.isCheckedOut = true;
+    catalog.checkedOutBy = patron._id;
+    catalog.checkedOutAt = currentDate;
     await catalog.save();
 
     // Record each checkout transaction, including repeat borrows of same item.

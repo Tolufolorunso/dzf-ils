@@ -36,7 +36,8 @@ export async function POST(request) {
       );
     }
 
-    const point = 3;
+    const requestedPoint = Number(body.point || 3);
+    const point = Number.isFinite(requestedPoint) ? requestedPoint : 3;
 
     const [patron, catalogItem] = await Promise.all([
       Patron.findOne({ barcode: patronBarcode }),
@@ -57,86 +58,80 @@ export async function POST(request) {
       );
     }
 
-    const activeHistoryForItem = [
-      ...(catalogItem.patronsCheckedOutHistory || []),
-    ]
-      .reverse()
-      .find((entry) => !entry.returnedAt);
-    const activeHistoryForPatron = [
-      ...(catalogItem.patronsCheckedOutHistory || []),
-    ]
-      .reverse()
-      .find((entry) => entry.barcode === patron.barcode && !entry.returnedAt);
+    const currentCheckedOutBy = catalogItem.checkedOutBy?.toString?.() || '';
+    const isCurrentlyCheckedOut = Boolean(
+      catalogItem.isCheckedOut &&
+        currentCheckedOutBy &&
+        catalogItem.checkedOutAt,
+    );
 
-    if (!catalogItem.isCheckedOut && activeHistoryForItem) {
-      catalogItem.isCheckedOut = true;
-    }
+    if (!isCurrentlyCheckedOut) {
+      catalogItem.isCheckedOut = false;
+      catalogItem.checkedOutBy = null;
+      catalogItem.checkedOutAt = null;
+      await catalogItem.save();
 
-    if (!catalogItem.isCheckedOut && !activeHistoryForItem) {
       return NextResponse.json(
         { status: false, message: 'Item is not checked out' },
         { status: StatusCodes.BAD_REQUEST },
       );
     }
 
-    if (!activeHistoryForPatron) {
-      if (
-        activeHistoryForItem &&
-        activeHistoryForItem.barcode !== patron.barcode
-      ) {
-        return NextResponse.json(
-          {
-            status: false,
-            message: `This item is currently checked out to another patron (${activeHistoryForItem.barcode}).`,
-          },
-          { status: StatusCodes.CONFLICT },
-        );
-      }
-
+    if (currentCheckedOutBy !== patron._id.toString()) {
       return NextResponse.json(
         {
           status: false,
-          message: 'No active checkout record found for this patron and item.',
+          message: 'This item is currently checked out to another patron.',
         },
-        { status: StatusCodes.BAD_REQUEST },
+        { status: StatusCodes.CONFLICT },
       );
     }
 
     const returnTimestamp = new Date();
 
-    if (!activeHistoryForPatron.returnedAt) {
-      activeHistoryForPatron.returnedAt = returnTimestamp;
+    const catalogHistoryIndex = (catalogItem.patronsCheckedOutHistory || [])
+      .map((entry, index) => ({ entry, index }))
+      .reverse()
+      .find(
+        ({ entry }) => entry.barcode === patron.barcode && !entry.returnedAt,
+      )?.index;
+
+    if (catalogHistoryIndex !== undefined) {
+      catalogItem.patronsCheckedOutHistory[catalogHistoryIndex].returnedAt =
+        returnTimestamp;
     }
+
     if (
       catalogItem.lastBorrowedBy &&
-      catalogItem.lastBorrowedBy.patronBarcode === patron.barcode &&
-      !catalogItem.lastBorrowedBy.returnedAt
+      (!catalogItem.lastBorrowedBy.patronBarcode ||
+        catalogItem.lastBorrowedBy.patronBarcode === patron.barcode)
     ) {
       catalogItem.lastBorrowedBy.returnedAt = returnTimestamp;
     }
 
     catalogItem.isCheckedOut = false;
+    catalogItem.checkedOutBy = null;
+    catalogItem.checkedOutAt = null;
 
     await catalogItem.save();
 
-    // Update patron's history with returnedAt
-    const patronHistoryIndex = [...(patron.itemsCheckedOutHistory || [])]
+    const patronHistoryIndex = (patron.itemsCheckedOutHistory || [])
+      .map((item, index) => ({ item, index }))
       .reverse()
-      .findIndex(
-        (item) => item.itemBarcode === itemBarcode && !item.returnedAt,
-      );
-    if (patronHistoryIndex !== -1) {
-      const actualIndex =
-        patron.itemsCheckedOutHistory.length - 1 - patronHistoryIndex;
-      patron.itemsCheckedOutHistory[actualIndex].returnedAt = returnTimestamp;
+      .find(({ item }) => item.itemBarcode === itemBarcode && !item.returnedAt)
+      ?.index;
+
+    if (patronHistoryIndex !== undefined) {
+      patron.itemsCheckedOutHistory[patronHistoryIndex].returnedAt =
+        returnTimestamp;
     }
 
     patron.hasBorrowedBook = false;
 
-    patron.lastBorrowedItem = undefined;
+    patron.set('lastBorrowedItem', undefined);
 
-    if (point && Number(point) > 0) {
-      patron.points = (patron.points || 0) + Number(point);
+    if (point > 0) {
+      patron.points = (patron.points || 0) + point;
     }
 
     await patron.save();
@@ -150,8 +145,8 @@ export async function POST(request) {
       {
         $inc: {
           booksReturned: 1,
-          pointsFromBooks: Number(point) || 0,
-          totalPoints: Number(point) || 0,
+          pointsFromBooks: point || 0,
+          totalPoints: point || 0,
         },
         $set: {
           patronBarcode: patron.barcode,
@@ -169,7 +164,7 @@ export async function POST(request) {
         data: {
           patron: `${patron.surname}, ${patron.firstname}`,
           item: catalogItem.title.mainTitle,
-          pointsAwarded: Number(point) || 0,
+          pointsAwarded: point || 0,
         },
       },
       { status: StatusCodes.OK },

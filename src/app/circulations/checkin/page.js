@@ -86,7 +86,7 @@ export default function CheckinPage() {
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Book Check-in</h1>
         <p className={styles.pageSubtitle}>
-          Return books and automatically award 15 points to patrons
+          Return books and automatically award 3 points to patrons
         </p>
       </div>
 
@@ -162,7 +162,8 @@ export default function CheckinPage() {
                 <strong>Item:</strong> {checkinResult.item}
               </div>
               <div className={styles.resultItem}>
-                <strong>Points Awarded:</strong> 15
+                <strong>Points Awarded:</strong>{' '}
+                {checkinResult.pointsAwarded ?? 3}
               </div>
             </div>
           </Card>
@@ -173,7 +174,7 @@ export default function CheckinPage() {
             <ul className={styles.guidelinesList}>
               <li>Verify the item is currently checked out</li>
               <li>Check patron information matches the checkout record</li>
-              <li>Automatically award 15 points for returning books</li>
+              <li>Automatically award 3 points for returning books</li>
               <li>Points are added to patron&apos;s total score</li>
               <li>Item will be marked as available for checkout</li>
             </ul>
