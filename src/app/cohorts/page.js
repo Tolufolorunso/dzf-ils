@@ -15,6 +15,20 @@ const initialAddStudentForm = {
   firstname: '',
   surname: '',
   middlename: '',
+  schoolClass: '',
+  receivedCertificate: false,
+  cohortType: '',
+};
+
+const initialEditStudentForm = {
+  id: '',
+  originalBarcode: '',
+  barcode: '',
+  firstname: '',
+  surname: '',
+  middlename: '',
+  schoolClass: '',
+  receivedCertificate: false,
   cohortType: '',
 };
 
@@ -67,11 +81,14 @@ export default function CohortsPage() {
   const [createCohortForm, setCreateCohortForm] = useState(
     initialCreateCohortForm
   );
+  const [editStudentForm, setEditStudentForm] = useState(initialEditStudentForm);
 
   const [addStudentLoading, setAddStudentLoading] = useState(false);
   const [moveStudentLoading, setMoveStudentLoading] = useState(false);
   const [renameCohortLoading, setRenameCohortLoading] = useState(false);
   const [createCohortLoading, setCreateCohortLoading] = useState(false);
+  const [editStudentLoading, setEditStudentLoading] = useState(false);
+  const [syncSheetsLoading, setSyncSheetsLoading] = useState(false);
   const [removingBarcode, setRemovingBarcode] = useState('');
 
   const [addStudentError, setAddStudentError] = useState('');
@@ -82,6 +99,8 @@ export default function CohortsPage() {
   const [renameCohortSuccess, setRenameCohortSuccess] = useState('');
   const [createCohortError, setCreateCohortError] = useState('');
   const [createCohortSuccess, setCreateCohortSuccess] = useState('');
+  const [editStudentError, setEditStudentError] = useState('');
+  const [editStudentSuccess, setEditStudentSuccess] = useState('');
 
   const fetchCohortData = useCallback(async ({ background = false } = {}) => {
     try {
@@ -154,10 +173,49 @@ export default function CohortsPage() {
   }, [cohortData?.allCohortTypes, selectedTypePreview]);
 
   const handleAddStudentChange = (event) => {
-    const { name, value } = event.target;
-    setAddStudentForm((current) => ({ ...current, [name]: value }));
+    const { name, type, checked, value } = event.target;
+    setAddStudentForm((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
     if (addStudentError) setAddStudentError('');
     if (addStudentSuccess) setAddStudentSuccess('');
+  };
+
+  const handleEditStudentChange = (event) => {
+    const { name, type, checked, value } = event.target;
+    setEditStudentForm((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    if (editStudentError) setEditStudentError('');
+    if (editStudentSuccess) setEditStudentSuccess('');
+  };
+
+  const openEditStudent = (student) => {
+    setEditStudentError('');
+    setEditStudentSuccess('');
+    setEditStudentForm({
+      id: student.id,
+      originalBarcode: student.barcode,
+      barcode: student.barcode,
+      firstname: student.firstname || '',
+      surname: student.surname || '',
+      middlename: student.middlename || '',
+      schoolClass: student.schoolClass || '',
+      receivedCertificate: Boolean(student.receivedCertificate),
+      cohortType: student.cohortType || '',
+    });
+  };
+
+  const closeEditStudent = () => {
+    if (editStudentLoading) {
+      return;
+    }
+
+    setEditStudentForm(initialEditStudentForm);
+    setEditStudentError('');
+    setEditStudentSuccess('');
   };
 
   const handleMoveStudentChange = (event) => {
@@ -257,6 +315,41 @@ export default function CohortsPage() {
     }
   };
 
+  const submitEditStudent = async (event) => {
+    event.preventDefault();
+    setEditStudentLoading(true);
+    setEditStudentError('');
+    setEditStudentSuccess('');
+
+    try {
+      const response = await fetch('/api/cohorts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'updatestudent',
+          ...editStudentForm,
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.status) {
+        setEditStudentError(data.message || 'Failed to update student.');
+        return;
+      }
+
+      setEditStudentSuccess(data.message);
+      fetchCohortData({ background: true });
+      setTimeout(() => closeEditStudent(), 350);
+    } catch (error) {
+      console.error('Update cohort student error:', error);
+      setEditStudentError('Network error. Please try again.');
+    } finally {
+      setEditStudentLoading(false);
+    }
+  };
+
   const submitRenameCohort = async (event) => {
     event.preventDefault();
     setRenameCohortLoading(true);
@@ -348,6 +441,7 @@ export default function CohortsPage() {
         },
         body: JSON.stringify({
           barcode: student.barcode,
+          cohortType: student.cohortType,
         }),
       });
 
@@ -364,6 +458,36 @@ export default function CohortsPage() {
       setPageError('Network error. Please try again.');
     } finally {
       setRemovingBarcode('');
+    }
+  };
+
+  const syncGoogleSheets = async () => {
+    setSyncSheetsLoading(true);
+    setPageError('');
+
+    try {
+      const response = await fetch('/api/cohorts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'syncgooglesheets',
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.status) {
+        setPageError(data.message || 'Failed to sync Google Sheets.');
+        return;
+      }
+
+      fetchCohortData({ background: true });
+    } catch (error) {
+      console.error('Sync Google Sheets error:', error);
+      setPageError('Network error. Please try again.');
+    } finally {
+      setSyncSheetsLoading(false);
     }
   };
 
@@ -409,6 +533,13 @@ export default function CohortsPage() {
               disabled={refreshing || loading}
             >
               {refreshing ? 'Refreshing...' : 'Refresh Cohort Data'}
+            </Button>
+            <Button
+              variant='secondary'
+              onClick={syncGoogleSheets}
+              disabled={syncSheetsLoading || loading}
+            >
+              {syncSheetsLoading ? 'Syncing Sheets...' : 'Sync Google Sheets'}
             </Button>
             <Button
               variant='primary'
@@ -560,6 +691,22 @@ export default function CohortsPage() {
                     onChange={handleAddStudentChange}
                     placeholder='Optional middlename'
                   />
+                  <Input
+                    label='Class'
+                    name='schoolClass'
+                    value={addStudentForm.schoolClass}
+                    onChange={handleAddStudentChange}
+                    placeholder='Example: JSS 2'
+                  />
+                  <label className={styles.checkboxField}>
+                    <input
+                      type='checkbox'
+                      name='receivedCertificate'
+                      checked={addStudentForm.receivedCertificate}
+                      onChange={handleAddStudentChange}
+                    />
+                    <span>Received Certificate</span>
+                  </label>
                   <Select
                     label='Cohort'
                     name='cohortType'
@@ -781,24 +928,49 @@ export default function CohortsPage() {
                             : styles.studentRow
                         }
                       >
-                        <div className={styles.studentIdentity}>
-                          <strong>{student.fullName}</strong>
-                          <span>
-                            {student.barcode} - {student.cohortType}
-                          </span>
-                          <span>
-                            Attendance logs: {student.attendanceCount} | Last:{' '}
-                            {formatDate(student.lastAttendanceDate)}
-                          </span>
-                          {student.normalizedSuggestion &&
-                            student.normalizedSuggestion !== student.cohortType && (
-                              <span>
-                                Suggested normalized name:{' '}
-                                {student.normalizedSuggestion}
-                              </span>
+                        <div className={styles.studentInfoGroup}>
+                          <div className={styles.studentPhotoContainer}>
+                            {student.imageUrl ? (
+                              <img
+                                src={student.imageUrl}
+                                alt={student.fullName}
+                                className={styles.studentPhoto}
+                              />
+                            ) : (
+                              <div className={styles.studentPhotoPlaceholder}>
+                                No Image
+                              </div>
                             )}
+                          </div>
+                          <div className={styles.studentIdentity}>
+                            <strong>{student.fullName}</strong>
+                            <span>
+                              {student.barcode} - {student.cohortType}
+                            </span>
+                            <span>
+                              Class: {student.schoolClass || 'N/A'} | Certificate:{' '}
+                              {student.receivedCertificate ? 'Received' : 'Not received'}
+                            </span>
+                            <span>
+                              Attendance logs: {student.attendanceCount} | Last:{' '}
+                              {formatDate(student.lastAttendanceDate)}
+                            </span>
+                            {student.normalizedSuggestion &&
+                              student.normalizedSuggestion !== student.cohortType && (
+                                <span>
+                                  Suggested normalized name:{' '}
+                                  {student.normalizedSuggestion}
+                                </span>
+                              )}
+                          </div>
                         </div>
                         <div className={styles.studentActions}>
+                          <Button
+                            variant='primary'
+                            onClick={() => openEditStudent(student)}
+                          >
+                            Edit
+                          </Button>
                           <Button
                             variant='secondary'
                             onClick={() =>
@@ -886,6 +1058,102 @@ export default function CohortsPage() {
             </div>
           )}
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(editStudentForm.id)}
+        onClose={closeEditStudent}
+        title='Edit Cohort Student'
+      >
+        <form onSubmit={submitEditStudent} className={styles.form}>
+          {editStudentError && (
+            <Alert
+              type='error'
+              message={editStudentError}
+              onClose={() => setEditStudentError('')}
+            />
+          )}
+          {editStudentSuccess && (
+            <Alert
+              type='success'
+              message={editStudentSuccess}
+              onClose={() => setEditStudentSuccess('')}
+            />
+          )}
+
+          <Input
+            label='Student Barcode'
+            name='barcode'
+            value={editStudentForm.barcode}
+            onChange={handleEditStudentChange}
+            placeholder='Enter student barcode'
+            required
+          />
+          <Input
+            label='Firstname'
+            name='firstname'
+            value={editStudentForm.firstname}
+            onChange={handleEditStudentChange}
+            placeholder='Enter firstname'
+            required
+          />
+          <Input
+            label='Surname'
+            name='surname'
+            value={editStudentForm.surname}
+            onChange={handleEditStudentChange}
+            placeholder='Enter surname'
+            required
+          />
+          <Input
+            label='Middlename'
+            name='middlename'
+            value={editStudentForm.middlename}
+            onChange={handleEditStudentChange}
+            placeholder='Optional middlename'
+          />
+          <Input
+            label='Class'
+            name='schoolClass'
+            value={editStudentForm.schoolClass}
+            onChange={handleEditStudentChange}
+            placeholder='Example: JSS 2'
+          />
+          <label className={styles.checkboxField}>
+            <input
+              type='checkbox'
+              name='receivedCertificate'
+              checked={editStudentForm.receivedCertificate}
+              onChange={handleEditStudentChange}
+            />
+            <span>Received Certificate</span>
+          </label>
+          <Select
+            label='Cohort'
+            name='cohortType'
+            value={editStudentForm.cohortType}
+            onChange={handleEditStudentChange}
+            options={cohortOptions.filter((option) => option.value !== 'all')}
+          />
+
+          <div className={styles.formActions}>
+            <Button
+              type='submit'
+              variant='primary'
+              disabled={editStudentLoading}
+            >
+              {editStudentLoading ? 'Saving...' : 'Save Student'}
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={closeEditStudent}
+              disabled={editStudentLoading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

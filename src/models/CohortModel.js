@@ -16,9 +16,22 @@ const CohortSchema = new mongoose.Schema(
       required: true,
     },
     middlename: String,
+    schoolClass: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    receivedCertificate: {
+      type: Boolean,
+      default: false,
+    },
     active: {
       type: Boolean,
       default: true,
+    },
+    isRemoved: {
+      type: Boolean,
+      default: false,
     },
     cohortType: {
       type: String,
@@ -41,6 +54,7 @@ const CohortSchema = new mongoose.Schema(
 );
 
 CohortSchema.index({ cohortType: 1, active: 1 });
+CohortSchema.index({ cohortType: 1, isRemoved: 1 });
 CohortSchema.index({ barcode: 1, active: 1 });
 CohortSchema.index({ barcode: 1, cohortType: 1 }, { unique: true });
 

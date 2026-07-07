@@ -20,6 +20,7 @@ const ROUTES = {
     '/api/auth/register',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
+    '/api/stats',
   ],
   authPages: [
     '/auth/login',

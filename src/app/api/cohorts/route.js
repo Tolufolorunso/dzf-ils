@@ -4,6 +4,8 @@ import { dbConnect } from '@/lib/dbConnect';
 import { verifyAuth } from '@/lib/auth';
 import Cohort from '@/models/CohortModel';
 import CohortGroup from '@/models/CohortGroupModel';
+import Patron from '@/models/PatronModel';
+import { syncCohortsToSpreadsheet } from '@/lib/googleSheets';
 import {
   DEFAULT_COHORT_TYPES,
   cleanText,
@@ -26,8 +28,16 @@ function getCohortTypeValue(value) {
   return cleanText(value);
 }
 
+function getBooleanValue(value) {
+  return value === true || value === 'true' || value === 'on' || value === 1;
+}
+
 function buildFullName(student) {
   return `${student.surname}, ${student.firstname} ${student.middlename || ''}`.trim();
+}
+
+function isRemovedStudent(student) {
+  return Boolean(student?.isRemoved || student?.active === false);
 }
 
 function getLastAttendanceDate(attendance = []) {
@@ -91,6 +101,28 @@ async function prepareCohortData(staffName = 'System') {
   await ensureDefaultCohortGroups(staffName);
 }
 
+async function syncAllCohortsToSheets() {
+  try {
+    const [students, groups] = await Promise.all([
+      Cohort.find({}).sort({ cohortType: 1, surname: 1, firstname: 1 }).lean(),
+      CohortGroup.find({ active: true }).sort({ order: 1, cohortType: 1 }).lean(),
+    ]);
+
+    return await syncCohortsToSpreadsheet(students, groups);
+  } catch (error) {
+    console.error('Google Sheets cohort sync error:', error);
+    return {
+      skipped: true,
+      error: error.message,
+    };
+  }
+}
+
+async function saveStudentAndSync(student) {
+  await student.save();
+  return syncAllCohortsToSheets();
+}
+
 async function cohortTypeExists(cohortType) {
   const rawCohortType = getCohortTypeValue(cohortType);
 
@@ -103,6 +135,7 @@ async function cohortTypeExists(cohortType) {
     Cohort.findOne({
       cohortType: rawCohortType,
       active: { $ne: false },
+      isRemoved: { $ne: true },
     }).lean(),
   ]);
 
@@ -117,10 +150,10 @@ async function buildCohortPayload(selectedCohortType = 'all') {
 
   const [groups, activeStudents, totalStudents] = await Promise.all([
     CohortGroup.find({ active: true }).sort({ order: 1, cohortType: 1 }).lean(),
-    Cohort.find({ active: { $ne: false } })
+    Cohort.find({ active: { $ne: false }, isRemoved: { $ne: true } })
       .sort({ cohortType: 1, surname: 1, firstname: 1 })
       .lean(),
-    Cohort.countDocuments({ active: { $ne: false } }),
+    Cohort.countDocuments({ active: { $ne: false }, isRemoved: { $ne: true } }),
   ]);
 
   const cohortCountMap = new Map();
@@ -179,12 +212,27 @@ async function buildCohortPayload(selectedCohortType = 'all') {
           (student) => getCohortTypeValue(student.cohortType) === selectedType,
         );
 
+  const barcodes = selectedStudents.map((s) => s.barcode).filter(Boolean);
+  const patrons = await Patron.find({ barcode: { $in: barcodes } })
+    .select('barcode image_url')
+    .lean();
+
+  const patronImageMap = new Map(
+    patrons.map((p) => [
+      p.barcode,
+      p.image_url?.secure_url || (typeof p.image_url === 'string' ? p.image_url : ''),
+    ])
+  );
+
   const students = selectedStudents.map((student) => ({
     id: student._id.toString(),
     barcode: student.barcode,
     firstname: student.firstname,
     surname: student.surname,
     middlename: student.middlename || '',
+    schoolClass: student.schoolClass || '',
+    receivedCertificate: Boolean(student.receivedCertificate),
+    isRemoved: isRemovedStudent(student),
     fullName: buildFullName(student),
     cohortType: getCohortTypeValue(student.cohortType),
     normalizedSuggestion: normalizeCohortType(student.cohortType),
@@ -192,6 +240,7 @@ async function buildCohortPayload(selectedCohortType = 'all') {
       ? student.attendance.length
       : 0,
     lastAttendanceDate: getLastAttendanceDate(student.attendance),
+    imageUrl: patronImageMap.get(student.barcode) || '',
     createdAt: student.createdAt,
     updatedAt: student.updatedAt,
   }));
@@ -273,6 +322,7 @@ async function handleCreateCohort(body, user) {
     existingGroup.displayName = cohortType;
     existingGroup.updatedBy = staffName;
     await existingGroup.save();
+    const sheetsSync = await syncAllCohortsToSheets();
 
     return NextResponse.json(
       {
@@ -281,6 +331,7 @@ async function handleCreateCohort(body, user) {
         data: {
           cohortType: existingGroup.cohortType,
           displayName: existingGroup.displayName,
+          sheetsSync,
         },
       },
       { status: StatusCodes.OK },
@@ -297,6 +348,7 @@ async function handleCreateCohort(body, user) {
       ? DEFAULT_COHORT_TYPES.indexOf(cohortType) + 1
       : 100,
   });
+  const sheetsSync = await syncAllCohortsToSheets();
 
   return NextResponse.json(
     {
@@ -305,6 +357,7 @@ async function handleCreateCohort(body, user) {
       data: {
         cohortType: group.cohortType,
         displayName: group.displayName,
+        sheetsSync,
       },
     },
     { status: StatusCodes.CREATED },
@@ -316,6 +369,8 @@ async function handleAddStudent(body) {
   const firstname = cleanText(body.firstname);
   const surname = cleanText(body.surname);
   const middlename = cleanText(body.middlename);
+  const schoolClass = cleanText(body.schoolClass);
+  const receivedCertificate = getBooleanValue(body.receivedCertificate);
   const cohortType = getCohortTypeValue(body.cohortType);
 
   if (!barcode || !firstname || !surname || !cohortType) {
@@ -330,7 +385,7 @@ async function handleAddStudent(body) {
 
   const existingStudent = await Cohort.findOne({ barcode, cohortType });
 
-  if (existingStudent?.active) {
+  if (existingStudent?.active && !existingStudent?.isRemoved) {
     return NextResponse.json(
       {
         status: false,
@@ -344,10 +399,13 @@ async function handleAddStudent(body) {
     existingStudent.firstname = firstname;
     existingStudent.surname = surname;
     existingStudent.middlename = middlename;
+    existingStudent.schoolClass = schoolClass;
+    existingStudent.receivedCertificate = receivedCertificate;
     existingStudent.cohortType = cohortType;
     existingStudent.active = true;
+    existingStudent.isRemoved = false;
     existingStudent.removedAt = null;
-    await existingStudent.save();
+    const sheetsSync = await saveStudentAndSync(existingStudent);
 
     return NextResponse.json(
       {
@@ -357,6 +415,7 @@ async function handleAddStudent(body) {
           barcode: existingStudent.barcode,
           fullName: buildFullName(existingStudent),
           cohortType: existingStudent.cohortType,
+          sheetsSync,
         },
       },
       { status: StatusCodes.OK },
@@ -368,9 +427,14 @@ async function handleAddStudent(body) {
     firstname,
     surname,
     middlename,
+    schoolClass,
+    receivedCertificate,
     cohortType,
     active: true,
+    isRemoved: false,
   });
+
+  const sheetsSync = await syncAllCohortsToSheets();
 
   return NextResponse.json(
     {
@@ -380,6 +444,7 @@ async function handleAddStudent(body) {
         barcode: student.barcode,
         fullName: buildFullName(student),
         cohortType: student.cohortType,
+        sheetsSync,
       },
     },
     { status: StatusCodes.CREATED },
@@ -408,7 +473,11 @@ async function handleMoveStudent(body) {
     );
   }
 
-  const student = await Cohort.findOne({ barcode, active: { $ne: false } });
+  const student = await Cohort.findOne({
+    barcode,
+    active: { $ne: false },
+    isRemoved: { $ne: true },
+  });
 
   if (!student) {
     return NextResponse.json(
@@ -417,8 +486,24 @@ async function handleMoveStudent(body) {
     );
   }
 
+  const duplicate = await Cohort.findOne({
+    _id: { $ne: student._id },
+    barcode,
+    cohortType,
+  });
+
+  if (duplicate) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: 'This barcode already exists in the target cohort.',
+      },
+      { status: StatusCodes.CONFLICT },
+    );
+  }
+
   student.cohortType = cohortType;
-  await student.save();
+  const sheetsSync = await saveStudentAndSync(student);
 
   return NextResponse.json(
     {
@@ -428,6 +513,87 @@ async function handleMoveStudent(body) {
         barcode: student.barcode,
         fullName: buildFullName(student),
         cohortType: student.cohortType,
+        sheetsSync,
+      },
+    },
+    { status: StatusCodes.OK },
+  );
+}
+
+async function handleUpdateStudent(body) {
+  const id = cleanText(body.id);
+  const originalBarcode = cleanText(body.originalBarcode);
+  const barcode = cleanText(body.barcode);
+  const firstname = cleanText(body.firstname);
+  const surname = cleanText(body.surname);
+  const middlename = cleanText(body.middlename);
+  const schoolClass = cleanText(body.schoolClass);
+  const receivedCertificate = getBooleanValue(body.receivedCertificate);
+  const cohortType = getCohortTypeValue(body.cohortType);
+
+  if (!barcode || !firstname || !surname || !cohortType) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: 'Barcode, firstname, surname, and cohort type are required.',
+      },
+      { status: StatusCodes.BAD_REQUEST },
+    );
+  }
+
+  const student = id
+    ? await Cohort.findById(id)
+    : await Cohort.findOne({
+        barcode: originalBarcode || barcode,
+        active: { $ne: false },
+        isRemoved: { $ne: true },
+      });
+
+  if (!student || isRemovedStudent(student)) {
+    return NextResponse.json(
+      { status: false, message: 'Active cohort student not found.' },
+      { status: StatusCodes.NOT_FOUND },
+    );
+  }
+
+  const duplicate = await Cohort.findOne({
+    _id: { $ne: student._id },
+    barcode,
+    cohortType,
+  });
+
+  if (duplicate) {
+    return NextResponse.json(
+      {
+        status: false,
+        message: 'Another student already has this barcode in that cohort.',
+      },
+      { status: StatusCodes.CONFLICT },
+    );
+  }
+
+  student.barcode = barcode;
+  student.firstname = firstname;
+  student.surname = surname;
+  student.middlename = middlename;
+  student.schoolClass = schoolClass;
+  student.receivedCertificate = receivedCertificate;
+  student.cohortType = cohortType;
+  student.active = true;
+  student.isRemoved = false;
+  student.removedAt = null;
+
+  const sheetsSync = await saveStudentAndSync(student);
+
+  return NextResponse.json(
+    {
+      status: true,
+      message: 'Student updated successfully.',
+      data: {
+        barcode: student.barcode,
+        fullName: buildFullName(student),
+        cohortType: student.cohortType,
+        sheetsSync,
       },
     },
     { status: StatusCodes.OK },
@@ -520,6 +686,8 @@ async function handleRenameCohort(body, user) {
     });
   }
 
+  const sheetsSync = await syncAllCohortsToSheets();
+
   return NextResponse.json(
     {
       status: true,
@@ -528,6 +696,7 @@ async function handleRenameCohort(body, user) {
         previousCohortType: currentCohortType,
         cohortType: newCohortType,
         affectedStudents,
+        sheetsSync,
       },
     },
     { status: StatusCodes.OK },
@@ -536,6 +705,7 @@ async function handleRenameCohort(body, user) {
 
 async function handleRemoveStudent(body) {
   const barcode = cleanText(body.barcode);
+  const cohortType = getCohortTypeValue(body.cohortType);
 
   if (!barcode) {
     return NextResponse.json(
@@ -544,7 +714,12 @@ async function handleRemoveStudent(body) {
     );
   }
 
-  const student = await Cohort.findOne({ barcode, active: { $ne: false } });
+  const student = await Cohort.findOne({
+    barcode,
+    ...(cohortType ? { cohortType } : {}),
+    active: { $ne: false },
+    isRemoved: { $ne: true },
+  });
 
   if (!student) {
     return NextResponse.json(
@@ -554,8 +729,9 @@ async function handleRemoveStudent(body) {
   }
 
   student.active = false;
+  student.isRemoved = true;
   student.removedAt = new Date();
-  await student.save();
+  const sheetsSync = await saveStudentAndSync(student);
 
   return NextResponse.json(
     {
@@ -564,6 +740,7 @@ async function handleRemoveStudent(body) {
       data: {
         barcode: student.barcode,
         fullName: buildFullName(student),
+        sheetsSync,
       },
     },
     { status: StatusCodes.OK },
@@ -714,10 +891,31 @@ export async function PATCH(request) {
       return handleRenameCohort(body, auth.user);
     }
 
+    if (action === 'syncgooglesheets') {
+      const sheetsSync = await syncAllCohortsToSheets();
+      return NextResponse.json(
+        {
+          status: true,
+          message: sheetsSync.skipped
+            ? 'Google Sheets sync skipped. Check server configuration.'
+            : 'Google Sheets synced successfully.',
+          data: {
+            sheetsSync,
+          },
+        },
+        { status: StatusCodes.OK },
+      );
+    }
+
+    if (action === 'updatestudent') {
+      return handleUpdateStudent(body);
+    }
+
     return NextResponse.json(
       {
         status: false,
-        message: 'Invalid action. Use movestudent or renamecohort.',
+        message:
+          'Invalid action. Use movestudent, renamecohort, syncgooglesheets, or updatestudent.',
       },
       { status: StatusCodes.BAD_REQUEST },
     );
