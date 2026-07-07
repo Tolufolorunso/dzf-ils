@@ -132,10 +132,10 @@ function normalizeStudent(student, totalClasses = 0) {
     surname: toTitleCase(student?.surname),
     middlename: toTitleCase(student?.middlename),
     schoolClass: student?.schoolClass || '',
-    receivedCertificate: Boolean(student?.receivedCertificate),
+    receivedCertificate: student?.receivedCertificate ? 'Yes' : 'No',
     cohortType: student?.cohortType || 'unassigned',
-    active: student?.active !== false,
-    isRemoved: Boolean(student?.isRemoved || student?.active === false),
+    active: student?.active !== false ? 'Yes' : 'No',
+    isRemoved: Boolean(student?.isRemoved || student?.active === false) ? 'Yes' : 'No',
     attendancePercentage: formatAttendancePercentage(student, totalClasses),
     createdAt: serializeDate(student?.createdAt),
   };
@@ -311,7 +311,7 @@ function buildFormatRequests(sheetId, students) {
 
   students.forEach((student, index) => {
     const normalized = normalizeStudent(student);
-    if (normalized.isRemoved) {
+    if (normalized.isRemoved === 'Yes') {
       requests.push({
         repeatCell: {
           range: {
@@ -327,7 +327,8 @@ function buildFormatRequests(sheetId, students) {
           fields: 'userEnteredFormat.backgroundColor',
         },
       });
-    } else if (normalized.receivedCertificate) {
+    } else if (normalized.receivedCertificate === 'Yes') {
+      console.log('certifucate', normalized.receivedCertificate);
       requests.push({
         repeatCell: {
           range: {
