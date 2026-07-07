@@ -69,10 +69,6 @@ export async function GET(request) {
           totalTeachers,
           totalTeachersSchools,
           totalPatronsSchools,
-          details: {
-            totalStudentPatronsSchools: new Set(uniqueStudentSchools).size,
-            uniqueTeacherSchoolsList: uniqueTeacherSchools,
-          }
         },
       },
       {
