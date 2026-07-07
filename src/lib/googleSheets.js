@@ -4,7 +4,7 @@ const SHEET_COLUMNS = [
   { key: 'barcode', label: 'Barcode' },
   { key: 'firstname', label: 'First Name' },
   { key: 'surname', label: 'Surname' },
-  { key: 'middlename', label: 'Middle Name' },
+  { key: 'middlename', label: 'Computer Assigned Id' },
   { key: 'schoolClass', label: 'Class' },
   { key: 'receivedCertificate', label: 'Certificate Received' },
   { key: 'cohortType', label: 'Cohort Type' },
@@ -61,9 +61,9 @@ function getSheetsClient() {
 function isSheetsConfigured() {
   return Boolean(
     process.env.GOOGLE_PROJECT_ID &&
-      process.env.GOOGLE_PRIVATE_KEY &&
-      process.env.GOOGLE_CLIENT_EMAIL &&
-      process.env.GOOGLE_SHEET_ID,
+    process.env.GOOGLE_PRIVATE_KEY &&
+    process.env.GOOGLE_CLIENT_EMAIL &&
+    process.env.GOOGLE_SHEET_ID,
   );
 }
 
