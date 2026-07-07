@@ -14,8 +14,10 @@ export async function GET(request) {
       isRemoved: { $ne: true },
     });
 
-    // 2. Total number of patrons registered (all records)
-    const totalPatronsRegistered = await Patron.countDocuments({});
+    // 2. Total number of students registered (patrons of type student)
+    const totalStudentsRegistered = await Patron.countDocuments({
+      patronType: 'student',
+    });
 
     // 3. Total number of Teachers
     const totalTeachers = await Patron.countDocuments({
@@ -65,7 +67,7 @@ export async function GET(request) {
         status: true,
         data: {
           totalCohortStudents,
-          totalPatronsRegistered,
+          totalStudentsRegistered,
           totalTeachers,
           totalTeachersSchools,
           totalPatronsSchools,
