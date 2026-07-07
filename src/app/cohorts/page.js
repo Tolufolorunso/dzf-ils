@@ -350,6 +350,50 @@ export default function CohortsPage() {
     }
   };
 
+  const toggleCertificate = async (student) => {
+    const actionText = student.receivedCertificate ? 'revoke' : 'grant';
+    const confirmed = window.confirm(
+      `Are you sure you want to ${actionText} the certificate for ${student.fullName}?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setPageError('');
+      const response = await fetch('/api/cohorts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'updatestudent',
+          id: student.id,
+          originalBarcode: student.barcode,
+          barcode: student.barcode,
+          firstname: student.firstname,
+          surname: student.surname,
+          middlename: student.middlename,
+          schoolClass: student.schoolClass,
+          cohortType: student.cohortType,
+          receivedCertificate: !student.receivedCertificate,
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.status) {
+        setPageError(data.message || `Failed to ${actionText} certificate.`);
+        return;
+      }
+
+      fetchCohortData({ background: true });
+    } catch (error) {
+      console.error('Toggle certificate error:', error);
+      setPageError('Network error. Please try again.');
+    }
+  };
+
   const submitRenameCohort = async (event) => {
     event.preventDefault();
     setRenameCohortLoading(true);
@@ -965,6 +1009,12 @@ export default function CohortsPage() {
                           </div>
                         </div>
                         <div className={styles.studentActions}>
+                           <Button
+                            variant='secondary'
+                            onClick={() => toggleCertificate(student)}
+                          >
+                            {student.receivedCertificate ? 'revoke Certificate' : 'Get Certificate'}
+                          </Button>
                           <Button
                             variant='primary'
                             onClick={() => openEditStudent(student)}
