@@ -63,8 +63,10 @@ async function ensureDefaultCohortGroups(staffName = 'System') {
             description: '',
             active: true,
             createdBy: staffName,
-            updatedBy: staffName,
             order: index + 1,
+          },
+          $set: {
+            updatedBy: staffName,
           },
         },
         { upsert: true, new: true },
@@ -154,34 +156,14 @@ async function buildCohortPayload(selectedCohortType = 'all') {
     Cohort.countDocuments({ active: { $ne: false }, isRemoved: { $ne: true } }),
   ]);
 
-  const cohortCountMap = new Map();
   let totalAttendanceEntries = 0;
-
   activeStudents.forEach((student) => {
-    const cohortType = getCohortTypeValue(student.cohortType) || 'unassigned';
-    cohortCountMap.set(cohortType, (cohortCountMap.get(cohortType) || 0) + 1);
     totalAttendanceEntries += Array.isArray(student.attendance)
       ? student.attendance.length
       : 0;
   });
 
-  const groupMap = new Map(
-    groups.map((group) => [getCohortTypeValue(group.cohortType), group]),
-  );
-
-  cohortCountMap.forEach((studentCount, cohortType) => {
-    if (!groupMap.has(cohortType)) {
-      groupMap.set(cohortType, {
-        cohortType,
-        displayName: cohortType,
-        description: '',
-        order: 100,
-        active: true,
-      });
-    }
-  });
-
-  const filters = Array.from(groupMap.values())
+  const filters = groups
     .filter((group) => getCohortTypeValue(group.cohortType))
     .sort((left, right) => {
       return (
@@ -193,23 +175,37 @@ async function buildCohortPayload(selectedCohortType = 'all') {
     })
     .map((group) => {
       const cohortType = getCohortTypeValue(group.cohortType);
+      const normGroupType = normalizeCohortType(cohortType) || cohortType.toLowerCase();
+      const studentCount = activeStudents.filter((student) => {
+        const rawStudentType = getCohortTypeValue(student.cohortType);
+        const normStudentType = normalizeCohortType(rawStudentType) || rawStudentType.toLowerCase();
+        return normStudentType === normGroupType;
+      }).length;
+
       return {
         cohortType,
         displayName: group.displayName || cohortType,
         description: group.description || '',
         active: group.active !== false,
-        studentCount: cohortCountMap.get(cohortType) || 0,
+        studentCount,
         isDefault: isDefaultCohortType(cohortType),
         normalizedSuggestion: normalizeCohortType(cohortType),
       };
     });
 
+  const normSelectedType =
+    selectedType !== 'all'
+      ? normalizeCohortType(selectedType) || selectedType.toLowerCase()
+      : 'all';
+
   const selectedStudents =
     selectedType === 'all'
       ? activeStudents
-      : activeStudents.filter(
-          (student) => getCohortTypeValue(student.cohortType) === selectedType,
-        );
+      : activeStudents.filter((student) => {
+          const rawStudentType = getCohortTypeValue(student.cohortType);
+          const normStudentType = normalizeCohortType(rawStudentType) || rawStudentType.toLowerCase();
+          return normStudentType === normSelectedType;
+        });
 
   const barcodes = selectedStudents.map((s) => s.barcode).filter(Boolean);
   const patrons = await Patron.find({ barcode: { $in: barcodes } })
@@ -601,13 +597,9 @@ async function handleUpdateStudent(body) {
 
 async function handleUpdateCohort(body, user) {
   const currentCohortType = getCohortTypeValue(body.currentCohortType);
-  const rawNewType = getCohortTypeValue(
-    body.newCohortType || body.cohortType || body.currentCohortType
-  );
-  const description =
-    body.description !== undefined ? cleanText(body.description) : undefined;
-  const active =
-    body.active !== undefined ? getBooleanValue(body.active) : undefined;
+  const rawNewType = getCohortTypeValue(body.newCohortType || body.cohortType || body.currentCohortType);
+  const description = body.description !== undefined ? cleanText(body.description) : undefined;
+  const active = body.active !== undefined ? getBooleanValue(body.active) : undefined;
   const staffName = getStaffName(user);
 
   if (!currentCohortType) {
@@ -624,22 +616,13 @@ async function handleUpdateCohort(body, user) {
     );
   }
 
-  const normCurrent = normalizeCohortType(currentCohortType);
-  const normNew = normalizeCohortType(rawNewType);
-
-  let currentGroup = await CohortGroup.findOne({
-    $or: [
-      { cohortType: currentCohortType },
-      ...(normCurrent ? [{ cohortType: normCurrent }] : []),
-    ],
-  });
-
-  const affectedStudents = await Cohort.countDocuments({
-    $or: [
-      { cohortType: currentCohortType },
-      ...(normCurrent ? [{ cohortType: normCurrent }] : []),
-    ],
-  });
+  const [currentGroup, targetGroup, affectedStudents] = await Promise.all([
+    CohortGroup.collection.findOne({ cohortType: currentCohortType }),
+    currentCohortType === rawNewType
+      ? CohortGroup.collection.findOne({ cohortType: currentCohortType })
+      : CohortGroup.collection.findOne({ cohortType: rawNewType }),
+    Cohort.collection.countDocuments({ cohortType: currentCohortType }),
+  ]);
 
   if (!currentGroup && affectedStudents === 0) {
     return NextResponse.json(
@@ -648,52 +631,43 @@ async function handleUpdateCohort(body, user) {
     );
   }
 
-  if (currentCohortType !== rawNewType && normCurrent !== normNew) {
-    const targetGroup = await CohortGroup.findOne({
-      $or: [
-        { cohortType: rawNewType },
-        ...(normNew ? [{ cohortType: normNew }] : []),
-      ],
-    });
-
+  if (currentCohortType !== rawNewType) {
     if (
       targetGroup &&
-      (!currentGroup ||
-        currentGroup._id.toString() !== targetGroup._id.toString())
+      (!currentGroup || currentGroup._id.toString() !== targetGroup._id.toString())
     ) {
       return NextResponse.json(
-        {
-          status: false,
-          message: `A cohort with the name "${rawNewType}" already exists.`,
-        },
+        { status: false, message: `A cohort with the name "${rawNewType}" already exists.` },
         { status: StatusCodes.CONFLICT },
       );
     }
 
-    await Cohort.updateMany(
-      {
-        $or: [
-          { cohortType: currentCohortType },
-          ...(normCurrent ? [{ cohortType: normCurrent }] : []),
-        ],
-      },
+    await Cohort.collection.updateMany(
+      { cohortType: currentCohortType },
       { $set: { cohortType: rawNewType } },
     );
   }
 
   if (currentGroup) {
-    currentGroup.cohortType = rawNewType;
-    currentGroup.displayName = rawNewType;
+    const updatePayload = {
+      cohortType: rawNewType,
+      displayName: rawNewType,
+      updatedBy: staffName,
+      updatedAt: new Date(),
+    };
     if (description !== undefined) {
-      currentGroup.description = description;
+      updatePayload.description = description;
     }
     if (active !== undefined) {
-      currentGroup.active = active;
+      updatePayload.active = active;
     }
-    currentGroup.updatedBy = staffName;
-    await currentGroup.save();
+
+    await CohortGroup.collection.updateOne(
+      { _id: currentGroup._id },
+      { $set: updatePayload },
+    );
   } else {
-    currentGroup = await CohortGroup.create({
+    await CohortGroup.collection.insertOne({
       cohortType: rawNewType,
       displayName: rawNewType,
       description: description || '',
@@ -703,6 +677,8 @@ async function handleUpdateCohort(body, user) {
       order: DEFAULT_COHORT_TYPES.includes(rawNewType)
         ? DEFAULT_COHORT_TYPES.indexOf(rawNewType) + 1
         : 100,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
@@ -711,13 +687,12 @@ async function handleUpdateCohort(body, user) {
   return NextResponse.json(
     {
       status: true,
-      message: 'Cohort details updated successfully.',
+      message: 'Cohort updated successfully.',
       data: {
         previousCohortType: currentCohortType,
-        cohortType: currentGroup.cohortType,
-        displayName: currentGroup.displayName,
-        description: currentGroup.description,
-        active: currentGroup.active,
+        cohortType: rawNewType,
+        description,
+        active,
         affectedStudents,
         sheetsSync,
       },

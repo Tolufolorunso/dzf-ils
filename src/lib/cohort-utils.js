@@ -1,12 +1,4 @@
-export const DEFAULT_COHORT_TYPES = [
-  'cohort-1',
-  'cohort-2',
-  'cohort-3',
-  'cohort-4',
-  'cohort-5',
-  'cohort-6',
-  'cohort-7',
-];
+export const DEFAULT_COHORT_TYPES = ['cohort-1', 'cohort-2', 'cohort-3'];
 
 export const LEGACY_COHORT_ALIASES = {
   cohortone: 'cohort-1',
@@ -18,18 +10,6 @@ export const LEGACY_COHORT_ALIASES = {
   cohortthree: 'cohort-3',
   cohort3: 'cohort-3',
   'cohort-3': 'cohort-3',
-  cohortfour: 'cohort-4',
-  cohort4: 'cohort-4',
-  'cohort-4': 'cohort-4',
-  cohortfive: 'cohort-5',
-  cohort5: 'cohort-5',
-  'cohort-5': 'cohort-5',
-  cohortsix: 'cohort-6',
-  cohort6: 'cohort-6',
-  'cohort-6': 'cohort-6',
-  cohortseven: 'cohort-7',
-  cohort7: 'cohort-7',
-  'cohort-7': 'cohort-7',
 };
 
 export function cleanText(value) {
