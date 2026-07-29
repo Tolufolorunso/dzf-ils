@@ -152,7 +152,15 @@ function groupStudentsByCohort(students = [], cohortGroups = []) {
   cohortGroups.forEach((group) => {
     const sheetTitle = sanitizeSheetTitle(group?.cohortType);
     if (sheetTitle) {
-      grouped.set(sheetTitle, new Map());
+      grouped.set(sheetTitle, {
+        groupInfo: {
+          cohortType: group?.cohortType,
+          displayName: group?.displayName || group?.cohortType,
+          description: group?.description || '',
+          active: group?.active !== false,
+        },
+        studentsMap: new Map(),
+      });
     }
   });
 
@@ -160,7 +168,15 @@ function groupStudentsByCohort(students = [], cohortGroups = []) {
     const normalized = normalizeStudent(student);
     const sheetTitle = sanitizeSheetTitle(normalized.cohortType);
     if (!grouped.has(sheetTitle)) {
-      grouped.set(sheetTitle, new Map());
+      grouped.set(sheetTitle, {
+        groupInfo: {
+          cohortType: normalized.cohortType,
+          displayName: normalized.cohortType,
+          description: '',
+          active: true,
+        },
+        studentsMap: new Map(),
+      });
     }
 
     const barcodeKey = String(normalized.barcode).toLowerCase();
@@ -168,7 +184,7 @@ function groupStudentsByCohort(students = [], cohortGroups = []) {
       return;
     }
 
-    grouped.get(sheetTitle).set(barcodeKey, student);
+    grouped.get(sheetTitle).studentsMap.set(barcodeKey, student);
   });
 
   return grouped;
@@ -177,7 +193,7 @@ function groupStudentsByCohort(students = [], cohortGroups = []) {
 async function getSpreadsheetMetadata(sheetsClient) {
   const response = await sheetsClient.spreadsheets.get({
     spreadsheetId: process.env.GOOGLE_SHEET_ID,
-    fields: 'sheets(properties(sheetId,title))',
+    fields: 'sheets(properties(sheetId,title),charts(chartId))',
   });
 
   return response.data.sheets || [];
@@ -185,9 +201,16 @@ async function getSpreadsheetMetadata(sheetsClient) {
 
 async function ensureSheets(sheetsClient, sheetTitles) {
   const metadata = await getSpreadsheetMetadata(sheetsClient);
-  const sheetMap = new Map(
-    metadata.map((sheet) => [sheet.properties.title, sheet.properties.sheetId]),
-  );
+  const sheetMap = new Map();
+  const existingChartsMap = new Map();
+
+  metadata.forEach((sheet) => {
+    const title = sheet.properties.title;
+    const sheetId = sheet.properties.sheetId;
+    sheetMap.set(title, sheetId);
+    const chartIds = (sheet.charts || []).map((chart) => chart.chartId);
+    existingChartsMap.set(sheetId, chartIds);
+  });
 
   const addRequests = sheetTitles
     .filter((title) => !sheetMap.has(title))
@@ -212,12 +235,21 @@ async function ensureSheets(sheetsClient, sheetTitles) {
     ? await getSpreadsheetMetadata(sheetsClient)
     : metadata;
 
-  return new Map(
-    refreshedMetadata.map((sheet) => [
-      sheet.properties.title,
-      sheet.properties.sheetId,
-    ]),
-  );
+  const refreshedSheetMap = new Map();
+  const refreshedChartsMap = new Map();
+
+  refreshedMetadata.forEach((sheet) => {
+    const title = sheet.properties.title;
+    const sheetId = sheet.properties.sheetId;
+    refreshedSheetMap.set(title, sheetId);
+    const chartIds = (sheet.charts || []).map((chart) => chart.chartId);
+    refreshedChartsMap.set(sheetId, chartIds);
+  });
+
+  return {
+    sheetMap: refreshedSheetMap,
+    existingChartsMap: refreshedChartsMap,
+  };
 }
 
 function getTotalClassesForCohort(students) {
@@ -226,9 +258,60 @@ function getTotalClassesForCohort(students) {
   }, 0);
 }
 
-async function writeSheetValues(sheetsClient, sheetTitle, students) {
+function calculateCohortStats(students = [], totalClasses = 0) {
+  const totalStudents = students.length;
+  const activeStudents = students.filter(
+    (student) => student?.active !== false && !student?.isRemoved
+  ).length;
+  const certifiedStudents = students.filter(
+    (student) => Boolean(student?.receivedCertificate)
+  ).length;
+  const removedStudents = students.filter(
+    (student) => Boolean(student?.isRemoved || student?.active === false)
+  ).length;
+
+  let totalPctSum = 0;
+  students.forEach((student) => {
+    if (totalClasses > 0) {
+      const attended = countAttendedClasses(student?.attendance);
+      totalPctSum += (attended / totalClasses) * 100;
+    }
+  });
+
+  const avgAttendance = totalStudents > 0 && totalClasses > 0
+    ? Math.round(totalPctSum / totalStudents)
+    : 0;
+
+  return {
+    totalStudents,
+    activeStudents,
+    certifiedStudents,
+    removedStudents,
+    avgAttendance,
+  };
+}
+
+async function writeSheetValues(sheetsClient, sheetTitle, groupInfo, students) {
   const totalClasses = getTotalClassesForCohort(students);
+  const stats = calculateCohortStats(students, totalClasses);
+  const statusLabel = groupInfo?.active !== false
+    ? 'Active (Training Ongoing)'
+    : 'Inactive (Training Ended)';
+
   const values = [
+    ['COHORT NAME:', groupInfo?.displayName || sheetTitle],
+    ['DESCRIPTION:', groupInfo?.description || 'No description provided.'],
+    ['TRAINING STATUS:', statusLabel],
+    [],
+    ['COHORT STATISTICS'],
+    ['Metric', 'Value'],
+    ['Total Students', stats.totalStudents],
+    ['Active Students', stats.activeStudents],
+    ['Certificates Awarded', stats.certifiedStudents],
+    ['Removed Students', stats.removedStudents],
+    ['Average Attendance Rate', `${stats.avgAttendance}%`],
+    [],
+    ['STUDENT DIRECTORY'],
     SHEET_HEADERS,
     ...students.map((student) => studentToRow(student, totalClasses)),
   ];
@@ -248,76 +331,178 @@ async function writeSheetValues(sheetsClient, sheetTitle, students) {
   });
 }
 
-function buildFormatRequests(sheetId, students) {
-  const requests = [
-    {
-      repeatCell: {
-        range: {
-          sheetId,
-        },
-        cell: {
-          userEnteredFormat: {
-            backgroundColor: {
-              red: 1,
-              green: 1,
-              blue: 1,
-            },
-            textFormat: {
-              foregroundColor: {
-                red: 0,
-                green: 0,
-                blue: 0,
-              },
-              bold: false,
-            },
-          },
-        },
-        fields: 'userEnteredFormat(backgroundColor,textFormat)',
-      },
-    },
-    {
-      repeatCell: {
-        range: {
-          sheetId,
-          startRowIndex: 0,
-          endRowIndex: 1,
-        },
-        cell: {
-          userEnteredFormat: {
-            textFormat: {
-              bold: true,
-            },
-            backgroundColor: {
-              red: 0.9,
-              green: 0.93,
-              blue: 0.96,
-            },
-          },
-        },
-        fields: 'userEnteredFormat(textFormat,backgroundColor)',
-      },
-    },
-    {
-      autoResizeDimensions: {
-        dimensions: {
-          sheetId,
-          dimension: 'COLUMNS',
-          startIndex: 0,
-          endIndex: SHEET_COLUMNS.length,
-        },
-      },
-    },
-  ];
+function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []) {
+  const requests = [];
 
+  // Delete old charts if re-syncing to prevent duplication
+  existingChartIds.forEach((chartId) => {
+    requests.push({
+      deleteChart: {
+        chartId,
+      },
+    });
+  });
+
+  // Base background and text format reset
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+      },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: { red: 1, green: 1, blue: 1 },
+          textFormat: {
+            foregroundColor: { red: 0, green: 0, blue: 0 },
+            bold: false,
+          },
+        },
+      },
+      fields: 'userEnteredFormat(backgroundColor,textFormat)',
+    },
+  });
+
+  // Row 0: Cohort Title (Bold, larger font, light blue background)
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 0,
+        endRowIndex: 1,
+      },
+      cell: {
+        userEnteredFormat: {
+          textFormat: {
+            bold: true,
+            fontSize: 12,
+            foregroundColor: { red: 0.09, green: 0.2, blue: 0.3 },
+          },
+          backgroundColor: { red: 0.85, green: 0.91, blue: 0.97 },
+        },
+      },
+      fields: 'userEnteredFormat(textFormat,backgroundColor)',
+    },
+  });
+
+  // Row 1 & 2: Description & Status Header Labels
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 1,
+        endRowIndex: 3,
+        startColumnIndex: 0,
+        endColumnIndex: 1,
+      },
+      cell: {
+        userEnteredFormat: {
+          textFormat: { bold: true },
+        },
+      },
+      fields: 'userEnteredFormat.textFormat.bold',
+    },
+  });
+
+  // Row 4: Cohort Statistics Section Header
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 4,
+        endRowIndex: 5,
+        startColumnIndex: 0,
+        endColumnIndex: 2,
+      },
+      cell: {
+        userEnteredFormat: {
+          textFormat: { bold: true, fontSize: 11 },
+          backgroundColor: { red: 0.91, green: 0.93, blue: 0.96 },
+        },
+      },
+      fields: 'userEnteredFormat(textFormat,backgroundColor)',
+    },
+  });
+
+  // Row 5: Stats Table Headers (Metric / Value)
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 5,
+        endRowIndex: 6,
+        startColumnIndex: 0,
+        endColumnIndex: 2,
+      },
+      cell: {
+        userEnteredFormat: {
+          textFormat: { bold: true },
+          backgroundColor: { red: 0.8, green: 0.85, blue: 0.9 },
+        },
+      },
+      fields: 'userEnteredFormat(textFormat,backgroundColor)',
+    },
+  });
+
+  // Row 12: Student Directory Section Header
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 12,
+        endRowIndex: 13,
+      },
+      cell: {
+        userEnteredFormat: {
+          textFormat: { bold: true, fontSize: 11 },
+          backgroundColor: { red: 0.91, green: 0.93, blue: 0.96 },
+        },
+      },
+      fields: 'userEnteredFormat(textFormat,backgroundColor)',
+    },
+  });
+
+  // Row 13: Student Directory Header Columns
+  requests.push({
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 13,
+        endRowIndex: 14,
+      },
+      cell: {
+        userEnteredFormat: {
+          textFormat: { bold: true },
+          backgroundColor: { red: 0.85, green: 0.91, blue: 0.97 },
+        },
+      },
+      fields: 'userEnteredFormat(textFormat,backgroundColor)',
+    },
+  });
+
+  // Auto resize columns
+  requests.push({
+    autoResizeDimensions: {
+      dimensions: {
+        sheetId,
+        dimension: 'COLUMNS',
+        startIndex: 0,
+        endIndex: SHEET_COLUMNS.length,
+      },
+    },
+  });
+
+  // Conditional row formatting for students starting at row 14
   students.forEach((student, index) => {
+    const rowIndex = index + 14;
     const normalized = normalizeStudent(student);
+
     if (normalized.isRemoved === 'Yes') {
       requests.push({
         repeatCell: {
           range: {
             sheetId,
-            startRowIndex: index + 1,
-            endRowIndex: index + 2,
+            startRowIndex: rowIndex,
+            endRowIndex: rowIndex + 1,
           },
           cell: {
             userEnteredFormat: {
@@ -328,13 +513,12 @@ function buildFormatRequests(sheetId, students) {
         },
       });
     } else if (normalized.receivedCertificate === 'Yes') {
-      console.log('certifucate', normalized.receivedCertificate);
       requests.push({
         repeatCell: {
           range: {
             sheetId,
-            startRowIndex: index + 1,
-            endRowIndex: index + 2,
+            startRowIndex: rowIndex,
+            endRowIndex: rowIndex + 1,
           },
           cell: {
             userEnteredFormat: {
@@ -350,6 +534,80 @@ function buildFormatRequests(sheetId, students) {
     }
   });
 
+  // Position chart below the last row of students
+  const chartRowIndex = 14 + students.length + 2;
+
+  // Native Google Sheet Column/Bar Chart for Cohort Stats
+  requests.push({
+    addChart: {
+      chart: {
+        spec: {
+          title: `${groupInfo?.displayName || 'Cohort'} Statistics`,
+          basicChart: {
+            chartType: 'COLUMN',
+            legendPosition: 'NO_LEGEND',
+            axis: [
+              {
+                position: 'BOTTOM_AXIS',
+                title: 'Metric',
+              },
+              {
+                position: 'LEFT_AXIS',
+                title: 'Count',
+              },
+            ],
+            domains: [
+              {
+                domain: {
+                  sourceRange: {
+                    sources: [
+                      {
+                        sheetId,
+                        startRowIndex: 5, // Row 6 ("Metric", "Value") -> Data starts row 6 index
+                        endRowIndex: 10,  // Rows 6 to 9 (Total, Active, Certified, Removed)
+                        startColumnIndex: 0,
+                        endColumnIndex: 1,
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            series: [
+              {
+                series: {
+                  sourceRange: {
+                    sources: [
+                      {
+                        sheetId,
+                        startRowIndex: 5,
+                        endRowIndex: 10,
+                        startColumnIndex: 1,
+                        endColumnIndex: 2,
+                      },
+                    ],
+                  },
+                },
+                targetAxis: 'LEFT_AXIS',
+              },
+            ],
+          },
+        },
+        position: {
+          overlayPosition: {
+            anchorCell: {
+              sheetId,
+              rowIndex: chartRowIndex, // Positioned below the last student row
+              columnIndex: 0,          // Column A
+            },
+            widthPixels: 600,
+            heightPixels: 320,
+          },
+        },
+      },
+    },
+  });
+
   return requests;
 }
 
@@ -362,28 +620,39 @@ export async function syncCohortsToSpreadsheet(students = [], cohortGroups = [])
   }
 
   const sheetsClient = getSheetsClient();
-  const groupedStudents = groupStudentsByCohort(students, cohortGroups);
-  const sheetTitles = Array.from(groupedStudents.keys()).sort((left, right) =>
+  const groupedData = groupStudentsByCohort(students, cohortGroups);
+  const sheetTitles = Array.from(groupedData.keys()).sort((left, right) =>
     left.localeCompare(right),
   );
-  const sheetIds = await ensureSheets(sheetsClient, sheetTitles);
+  const { sheetMap, existingChartsMap } = await ensureSheets(
+    sheetsClient,
+    sheetTitles
+  );
 
   for (const sheetTitle of sheetTitles) {
-    const uniqueStudents = Array.from(groupedStudents.get(sheetTitle).values())
-      .sort((left, right) =>
+    const item = groupedData.get(sheetTitle);
+    const groupInfo = item.groupInfo;
+    const uniqueStudents = Array.from(item.studentsMap.values()).sort(
+      (left, right) =>
         `${left.surname || ''} ${left.firstname || ''}`.localeCompare(
           `${right.surname || ''} ${right.firstname || ''}`,
         ),
-      );
+    );
 
-    await writeSheetValues(sheetsClient, sheetTitle, uniqueStudents);
+    await writeSheetValues(sheetsClient, sheetTitle, groupInfo, uniqueStudents);
 
-    const sheetId = sheetIds.get(sheetTitle);
+    const sheetId = sheetMap.get(sheetTitle);
     if (sheetId !== undefined) {
+      const existingCharts = existingChartsMap.get(sheetId) || [];
       await sheetsClient.spreadsheets.batchUpdate({
         spreadsheetId: process.env.GOOGLE_SHEET_ID,
         requestBody: {
-          requests: buildFormatRequests(sheetId, uniqueStudents),
+          requests: buildFormatRequests(
+            sheetId,
+            groupInfo,
+            uniqueStudents,
+            existingCharts
+          ),
         },
       });
     }
@@ -397,3 +666,4 @@ export async function syncCohortsToSpreadsheet(students = [], cohortGroups = [])
 }
 
 export { SHEET_HEADERS };
+

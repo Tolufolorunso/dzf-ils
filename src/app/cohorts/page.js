@@ -46,6 +46,14 @@ const initialRenameCohortForm = {
 const initialCreateCohortForm = {
   cohortType: '',
   description: '',
+  active: true,
+};
+
+const initialEditCohortForm = {
+  currentCohortType: '',
+  cohortType: '',
+  description: '',
+  active: true,
 };
 
 function formatDate(value) {
@@ -59,7 +67,7 @@ function formatDate(value) {
 function buildOptions(filters) {
   return (filters || []).map((filter) => ({
     value: filter.cohortType,
-    label: `${filter.displayName} (${filter.studentCount})`,
+    label: `${filter.displayName} (${filter.studentCount}) ${filter.active === false ? '[Ended]' : ''}`,
   }));
 }
 
@@ -82,12 +90,14 @@ export default function CohortsPage() {
     initialCreateCohortForm
   );
   const [editStudentForm, setEditStudentForm] = useState(initialEditStudentForm);
+  const [editCohortForm, setEditCohortForm] = useState(initialEditCohortForm);
 
   const [addStudentLoading, setAddStudentLoading] = useState(false);
   const [moveStudentLoading, setMoveStudentLoading] = useState(false);
   const [renameCohortLoading, setRenameCohortLoading] = useState(false);
   const [createCohortLoading, setCreateCohortLoading] = useState(false);
   const [editStudentLoading, setEditStudentLoading] = useState(false);
+  const [editCohortLoading, setEditCohortLoading] = useState(false);
   const [syncSheetsLoading, setSyncSheetsLoading] = useState(false);
   const [removingBarcode, setRemovingBarcode] = useState('');
 
@@ -101,6 +111,8 @@ export default function CohortsPage() {
   const [createCohortSuccess, setCreateCohortSuccess] = useState('');
   const [editStudentError, setEditStudentError] = useState('');
   const [editStudentSuccess, setEditStudentSuccess] = useState('');
+  const [editCohortError, setEditCohortError] = useState('');
+  const [editCohortSuccess, setEditCohortSuccess] = useState('');
 
   const fetchCohortData = useCallback(async ({ background = false } = {}) => {
     try {
@@ -230,6 +242,75 @@ export default function CohortsPage() {
     setRenameCohortForm((current) => ({ ...current, [name]: value }));
     if (renameCohortError) setRenameCohortError('');
     if (renameCohortSuccess) setRenameCohortSuccess('');
+  };
+
+  const openEditCohort = (cohort) => {
+    setEditCohortError('');
+    setEditCohortSuccess('');
+    setEditCohortForm({
+      currentCohortType: cohort.cohortType,
+      cohortType: cohort.cohortType,
+      description: cohort.description || '',
+      active: cohort.active !== false,
+    });
+  };
+
+  const closeEditCohort = () => {
+    if (editCohortLoading) {
+      return;
+    }
+
+    setEditCohortForm(initialEditCohortForm);
+    setEditCohortError('');
+    setEditCohortSuccess('');
+  };
+
+  const handleEditCohortChange = (event) => {
+    const { name, type, checked, value } = event.target;
+    setEditCohortForm((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    if (editCohortError) setEditCohortError('');
+    if (editCohortSuccess) setEditCohortSuccess('');
+  };
+
+  const submitEditCohort = async (event) => {
+    event.preventDefault();
+    setEditCohortLoading(true);
+    setEditCohortError('');
+    setEditCohortSuccess('');
+
+    try {
+      const response = await fetch('/api/cohorts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'updatecohort',
+          currentCohortType: editCohortForm.currentCohortType,
+          newCohortType: editCohortForm.cohortType,
+          description: editCohortForm.description,
+          active: editCohortForm.active,
+        }),
+      });
+
+      const data = await response.json();
+      if (!data.status) {
+        setEditCohortError(data.message || 'Failed to update cohort.');
+        return;
+      }
+
+      setEditCohortSuccess(data.message);
+      fetchCohortData({ background: true });
+      setTimeout(() => closeEditCohort(), 350);
+    } catch (error) {
+      console.error('Update cohort error:', error);
+      setEditCohortError('Network error. Please try again.');
+    } finally {
+      setEditCohortLoading(false);
+    }
   };
 
   const handleCreateCohortChange = (event) => {
@@ -639,11 +720,35 @@ export default function CohortsPage() {
 
             <section className={styles.cohortGrid}>
               {cohorts.map((cohort) => (
-                <Card key={cohort.cohortType} title={cohort.displayName}>
+                <Card key={cohort.cohortType}>
                   <div className={styles.cohortCard}>
-                    <strong>{cohort.studentCount}</strong>
-                    <span>students</span>
-                    <p>{cohort.description || 'No description added yet.'}</p>
+                    <div className={styles.cohortCardHeader}>
+                      <h3 className={styles.cohortTitle}>{cohort.displayName}</h3>
+                      <span
+                        className={
+                          cohort.active !== false
+                            ? styles.statusBadgeActive
+                            : styles.statusBadgeEnded
+                        }
+                      >
+                        {cohort.active !== false ? 'Training Ongoing' : 'Training Ended'}
+                      </span>
+                    </div>
+                    <div className={styles.cohortStatLine}>
+                      <strong>{cohort.studentCount}</strong>
+                      <span>students</span>
+                    </div>
+                    <p className={styles.cohortDescription}>
+                      {cohort.description || 'No description added yet.'}
+                    </p>
+                    <div className={styles.cohortCardActions}>
+                      <Button
+                        variant='secondary'
+                        onClick={() => openEditCohort(cohort)}
+                      >
+                        Edit Cohort
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -1199,6 +1304,83 @@ export default function CohortsPage() {
               variant='secondary'
               onClick={closeEditStudent}
               disabled={editStudentLoading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(editCohortForm.currentCohortType)}
+        onClose={closeEditCohort}
+        title={`Edit Cohort: ${editCohortForm.currentCohortType}`}
+      >
+        <form onSubmit={submitEditCohort} className={styles.form}>
+          {editCohortError && (
+            <Alert
+              type='error'
+              message={editCohortError}
+              onClose={() => setEditCohortError('')}
+            />
+          )}
+          {editCohortSuccess && (
+            <Alert
+              type='success'
+              message={editCohortSuccess}
+              onClose={() => setEditCohortSuccess('')}
+            />
+          )}
+
+          <Input
+            label='Cohort Type / Name'
+            name='cohortType'
+            value={editCohortForm.cohortType}
+            onChange={handleEditCohortChange}
+            placeholder='Example: cohort-1'
+            required
+          />
+          <TextArea
+            label='Cohort Description'
+            name='description'
+            value={editCohortForm.description}
+            onChange={handleEditCohortChange}
+            placeholder='Describe the cohort training program or details...'
+            rows={3}
+          />
+          <Select
+            label='Training Status'
+            name='active'
+            value={editCohortForm.active ? 'true' : 'false'}
+            onChange={(e) =>
+              setEditCohortForm((curr) => ({
+                ...curr,
+                active: e.target.value === 'true',
+              }))
+            }
+            options={[
+              { value: 'true', label: 'Training Ongoing (Active)' },
+              { value: 'false', label: 'Training Ended (Inactive)' },
+            ]}
+          />
+
+          <div className={styles.helperBox}>
+            Changing the Cohort Type / Name will automatically update all student records belonging to this cohort.
+          </div>
+
+          <div className={styles.formActions}>
+            <Button
+              type='submit'
+              variant='primary'
+              disabled={editCohortLoading}
+            >
+              {editCohortLoading ? 'Saving...' : 'Save Cohort Details'}
+            </Button>
+            <Button
+              type='button'
+              variant='secondary'
+              onClick={closeEditCohort}
+              disabled={editCohortLoading}
             >
               Cancel
             </Button>

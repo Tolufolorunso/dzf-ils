@@ -92,30 +92,88 @@
 .cohortGrid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .cohortCard {
-  display: grid;
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 100%;
 }
 
-.cohortCard strong {
+.cohortCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cohortTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
   color: #17324d;
-  font-size: 2rem;
 }
 
-.cohortCard span {
+.statusBadgeActive {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(46, 125, 50, 0.12);
+  color: #1b5e20;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+}
+
+.statusBadgeEnded {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(198, 40, 40, 0.12);
+  color: #b71c1c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(198, 40, 40, 0.25);
+}
+
+.cohortStatLine {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.cohortStatLine strong {
+  color: #17324d;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.cohortStatLine span {
   color: #647385;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }
 
-.cohortCard p {
-  margin: 0.35rem 0 0;
+.cohortDescription {
+  margin: 0;
   color: #5e6d7e;
-  line-height: 1.6;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.cohortCardActions {
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
 }
 
 .formsGrid {
