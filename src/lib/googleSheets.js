@@ -150,19 +150,17 @@ function groupStudentsByCohort(students = [], cohortGroups = []) {
   const grouped = new Map();
   const cohortLookup = new Map();
 
-  // Enforce ONLY the 7 official cohort types (cohort-1 through cohort-7)
-  DEFAULT_COHORT_TYPES.forEach((cohortType) => {
-    const sheetTitle = sanitizeSheetTitle(cohortType);
-    const existingGroup = (cohortGroups || []).find(
-      (g) => normalizeCohortType(g?.cohortType) === cohortType || g?.cohortType === cohortType
-    );
+  cohortGroups.forEach((group) => {
+    const rawType = String(group?.cohortType || '').trim();
+    if (!rawType) return;
 
+    const sheetTitle = sanitizeSheetTitle(rawType);
     const groupData = {
       groupInfo: {
-        cohortType,
-        displayName: existingGroup?.displayName || cohortType,
-        description: existingGroup?.description || '',
-        active: existingGroup?.active !== false,
+        cohortType: rawType,
+        displayName: group?.displayName || rawType,
+        description: group?.description || '',
+        active: group?.active !== false,
       },
       studentsMap: new Map(),
     };
@@ -170,41 +168,46 @@ function groupStudentsByCohort(students = [], cohortGroups = []) {
     grouped.set(sheetTitle, groupData);
 
     cohortLookup.set(sheetTitle, sheetTitle);
-    cohortLookup.set(cohortType.toLowerCase(), sheetTitle);
-    const noSpace = cohortType.toLowerCase().replace(/[\s_-]+/g, '');
+    cohortLookup.set(rawType.toLowerCase(), sheetTitle);
+    const norm = normalizeCohortType(rawType);
+    if (norm) cohortLookup.set(norm, sheetTitle);
+    const noSpace = rawType.toLowerCase().replace(/[\s_-]+/g, '');
     cohortLookup.set(noSpace, sheetTitle);
   });
 
-  // Map known legacy aliases
-  Object.entries(LEGACY_COHORT_ALIASES).forEach(([alias, canonical]) => {
-    const sheetTitle = sanitizeSheetTitle(canonical);
-    if (grouped.has(sheetTitle)) {
-      cohortLookup.set(alias.toLowerCase(), sheetTitle);
-    }
-  });
-
-  // Populate students into their corresponding cohort (1 to 7)
   students.forEach((student) => {
-    const rawCohort = cleanText(student?.cohortType);
-    if (!rawCohort) return;
+    const studentCohortRaw = String(student?.cohortType || '').trim();
+    if (!studentCohortRaw) return;
 
     const barcodeKey = String(student?.barcode || '').trim().toLowerCase();
     if (!barcodeKey) return;
 
-    const normStudent = normalizeCohortType(rawCohort);
-    const studentLower = rawCohort.toLowerCase();
+    const normStudent = normalizeCohortType(studentCohortRaw);
+    const studentLower = studentCohortRaw.toLowerCase();
     const studentNoSpace = studentLower.replace(/[\s_-]+/g, '');
 
     const targetSheetTitle =
-      cohortLookup.get(sanitizeSheetTitle(normStudent)) ||
-      cohortLookup.get(normStudent) ||
+      cohortLookup.get(sanitizeSheetTitle(studentCohortRaw)) ||
       cohortLookup.get(studentLower) ||
+      cohortLookup.get(normStudent) ||
       cohortLookup.get(studentNoSpace) ||
-      sanitizeSheetTitle(normStudent || 'cohort-1');
+      sanitizeSheetTitle(studentCohortRaw);
 
-    if (grouped.has(targetSheetTitle)) {
-      grouped.get(targetSheetTitle).studentsMap.set(barcodeKey, student);
+    if (!grouped.has(targetSheetTitle)) {
+      const fallbackGroup = {
+        groupInfo: {
+          cohortType: studentCohortRaw,
+          displayName: studentCohortRaw,
+          description: '',
+          active: true,
+        },
+        studentsMap: new Map(),
+      };
+      grouped.set(targetSheetTitle, fallbackGroup);
+      cohortLookup.set(targetSheetTitle, targetSheetTitle);
     }
+
+    grouped.get(targetSheetTitle).studentsMap.set(barcodeKey, student);
   });
 
   return grouped;
@@ -324,12 +327,12 @@ async function writeSheetValues(sheetsClient, sheetTitle, groupInfo, students) {
     ['TRAINING STATUS:', statusLabel],
     [],
     ['COHORT STATISTICS'],
-    ['Metric', 'Value'],
-    ['Total Students', stats.totalStudents],
-    ['Active Students', stats.activeStudents],
-    ['Certificates Awarded', stats.certifiedStudents],
-    ['Removed Students', stats.removedStudents],
-    ['Average Attendance Rate', `${stats.avgAttendance}%`],
+    ['Metric', 'Value', 'Visual Bar Chart'],
+    ['Total Students', stats.totalStudents, `=SPARKLINE(${stats.totalStudents}, {"charttype","bar";"color","#17324D"})`],
+    ['Active Students', stats.activeStudents, `=SPARKLINE(${stats.activeStudents}, {"charttype","bar";"color","#2E7D32"})`],
+    ['Certificates Awarded', stats.certifiedStudents, `=SPARKLINE(${stats.certifiedStudents}, {"charttype","bar";"color","#0288D1"})`],
+    ['Removed Students', stats.removedStudents, `=SPARKLINE(${stats.removedStudents}, {"charttype","bar";"color","#D32F2F"})`],
+    ['Average Attendance Rate', `${stats.avgAttendance}%`, `=SPARKLINE(${stats.avgAttendance}, {"charttype","bar";"max",100;"color","#F57C00"})`],
     [],
     ['STUDENT DIRECTORY'],
     SHEET_HEADERS,
@@ -431,7 +434,7 @@ function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []
         startRowIndex: 4,
         endRowIndex: 5,
         startColumnIndex: 0,
-        endColumnIndex: 2,
+        endColumnIndex: 3,
       },
       cell: {
         userEnteredFormat: {
@@ -443,7 +446,7 @@ function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []
     },
   });
 
-  // Row 5: Stats Table Headers (Metric / Value)
+  // Row 5: Stats Table Headers (Metric / Value / Visual Bar Chart)
   requests.push({
     repeatCell: {
       range: {
@@ -451,7 +454,7 @@ function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []
         startRowIndex: 5,
         endRowIndex: 6,
         startColumnIndex: 0,
-        endColumnIndex: 2,
+        endColumnIndex: 3,
       },
       cell: {
         userEnteredFormat: {
@@ -554,8 +557,10 @@ function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []
     }
   });
 
-  // Position chart to the RIGHT in Column N (columnIndex 13) at Row 1 (rowIndex 0)
-  // This ensures the chart floats completely outside the student data table (Columns A-K)
+  // Position floating chart 6 rows below the last student row
+  const chartRowIndex = 14 + students.length + 6;
+
+  // Native Google Sheet Column/Bar Chart for Cohort Stats
   requests.push({
     addChart: {
       chart: {
@@ -581,8 +586,8 @@ function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []
                     sources: [
                       {
                         sheetId,
-                        startRowIndex: 5,
-                        endRowIndex: 10,
+                        startRowIndex: 5, // Row 6 ("Metric", "Value") -> Data starts row 6 index
+                        endRowIndex: 10,  // Rows 6 to 9 (Total, Active, Certified, Removed)
                         startColumnIndex: 0,
                         endColumnIndex: 1,
                       },
@@ -615,11 +620,11 @@ function buildFormatRequests(sheetId, groupInfo, students, existingChartIds = []
           overlayPosition: {
             anchorCell: {
               sheetId,
-              rowIndex: 0,     // Row 1
-              columnIndex: 13, // Column N (clean whitespace to the right)
+              rowIndex: chartRowIndex, // Positioned below the last student row
+              columnIndex: 0,          // Column A
             },
-            widthPixels: 550,
-            heightPixels: 300,
+            widthPixels: 600,
+            heightPixels: 320,
           },
         },
       },
@@ -638,25 +643,6 @@ export async function syncCohortsToSpreadsheet(students = [], cohortGroups = [])
   }
 
   const sheetsClient = getSheetsClient();
-
-  // Clear ALL values across ALL sheets in the spreadsheet first
-  try {
-    const existingMetadata = await getSpreadsheetMetadata(sheetsClient);
-    for (const sheet of existingMetadata) {
-      const title = sheet.properties.title;
-      try {
-        await sheetsClient.spreadsheets.values.clear({
-          spreadsheetId: process.env.GOOGLE_SHEET_ID,
-          range: `'${escapeSheetName(title)}'`,
-        });
-      } catch (e) {
-        console.warn(`Clearing values warning for ${title}:`, e.message);
-      }
-    }
-  } catch (err) {
-    console.warn('Metadata fetch warning during pre-clear:', err.message);
-  }
-
   const groupedData = groupStudentsByCohort(students, cohortGroups);
   const sheetTitles = Array.from(groupedData.keys()).sort((left, right) =>
     left.localeCompare(right),

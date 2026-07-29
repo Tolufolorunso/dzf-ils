@@ -53,7 +53,7 @@ export function normalizeCohortType(value) {
     return LEGACY_COHORT_ALIASES[normalized];
   }
 
-  const cohortMatch = normalized.match(/^cohort-?([1-7])$/);
+  const cohortMatch = normalized.match(/^cohort-?(\d+)$/);
   if (cohortMatch) {
     return `cohort-${cohortMatch[1]}`;
   }
