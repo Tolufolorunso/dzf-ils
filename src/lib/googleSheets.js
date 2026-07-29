@@ -148,43 +148,66 @@ function studentToRow(student, totalClasses) {
 
 function groupStudentsByCohort(students = [], cohortGroups = []) {
   const grouped = new Map();
+  const cohortLookup = new Map();
 
   cohortGroups.forEach((group) => {
-    const sheetTitle = sanitizeSheetTitle(group?.cohortType);
-    if (sheetTitle) {
-      grouped.set(sheetTitle, {
-        groupInfo: {
-          cohortType: group?.cohortType,
-          displayName: group?.displayName || group?.cohortType,
-          description: group?.description || '',
-          active: group?.active !== false,
-        },
-        studentsMap: new Map(),
-      });
-    }
+    const rawType = String(group?.cohortType || '').trim();
+    if (!rawType) return;
+
+    const sheetTitle = sanitizeSheetTitle(rawType);
+    const groupData = {
+      groupInfo: {
+        cohortType: rawType,
+        displayName: group?.displayName || rawType,
+        description: group?.description || '',
+        active: group?.active !== false,
+      },
+      studentsMap: new Map(),
+    };
+
+    grouped.set(sheetTitle, groupData);
+
+    cohortLookup.set(sheetTitle, sheetTitle);
+    cohortLookup.set(rawType.toLowerCase(), sheetTitle);
+    const norm = normalizeCohortType(rawType);
+    if (norm) cohortLookup.set(norm, sheetTitle);
+    const noSpace = rawType.toLowerCase().replace(/[\s_-]+/g, '');
+    cohortLookup.set(noSpace, sheetTitle);
   });
 
   students.forEach((student) => {
-    const normalized = normalizeStudent(student);
-    const sheetTitle = sanitizeSheetTitle(normalized.cohortType);
-    if (!grouped.has(sheetTitle)) {
-      grouped.set(sheetTitle, {
+    const studentCohortRaw = String(student?.cohortType || '').trim();
+    if (!studentCohortRaw) return;
+
+    const barcodeKey = String(student?.barcode || '').trim().toLowerCase();
+    if (!barcodeKey) return;
+
+    const normStudent = normalizeCohortType(studentCohortRaw);
+    const studentLower = studentCohortRaw.toLowerCase();
+    const studentNoSpace = studentLower.replace(/[\s_-]+/g, '');
+
+    const targetSheetTitle =
+      cohortLookup.get(sanitizeSheetTitle(studentCohortRaw)) ||
+      cohortLookup.get(studentLower) ||
+      cohortLookup.get(normStudent) ||
+      cohortLookup.get(studentNoSpace) ||
+      sanitizeSheetTitle(studentCohortRaw);
+
+    if (!grouped.has(targetSheetTitle)) {
+      const fallbackGroup = {
         groupInfo: {
-          cohortType: normalized.cohortType,
-          displayName: normalized.cohortType,
+          cohortType: studentCohortRaw,
+          displayName: studentCohortRaw,
           description: '',
           active: true,
         },
         studentsMap: new Map(),
-      });
+      };
+      grouped.set(targetSheetTitle, fallbackGroup);
+      cohortLookup.set(targetSheetTitle, targetSheetTitle);
     }
 
-    const barcodeKey = String(normalized.barcode).toLowerCase();
-    if (!barcodeKey) {
-      return;
-    }
-
-    grouped.get(sheetTitle).studentsMap.set(barcodeKey, student);
+    grouped.get(targetSheetTitle).studentsMap.set(barcodeKey, student);
   });
 
   return grouped;

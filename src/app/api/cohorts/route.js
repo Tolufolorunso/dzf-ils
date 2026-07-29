@@ -61,12 +61,10 @@ async function ensureDefaultCohortGroups(staffName = 'System') {
           $setOnInsert: {
             displayName: cohortType,
             description: '',
-            createdBy: staffName,
-            order: index + 1,
-          },
-          $set: {
             active: true,
+            createdBy: staffName,
             updatedBy: staffName,
+            order: index + 1,
           },
         },
         { upsert: true, new: true },
@@ -603,9 +601,13 @@ async function handleUpdateStudent(body) {
 
 async function handleUpdateCohort(body, user) {
   const currentCohortType = getCohortTypeValue(body.currentCohortType);
-  const rawNewType = getCohortTypeValue(body.newCohortType || body.cohortType || body.currentCohortType);
-  const description = body.description !== undefined ? cleanText(body.description) : undefined;
-  const active = body.active !== undefined ? getBooleanValue(body.active) : undefined;
+  const rawNewType = getCohortTypeValue(
+    body.newCohortType || body.cohortType || body.currentCohortType
+  );
+  const description =
+    body.description !== undefined ? cleanText(body.description) : undefined;
+  const active =
+    body.active !== undefined ? getBooleanValue(body.active) : undefined;
   const staffName = getStaffName(user);
 
   if (!currentCohortType) {
@@ -622,13 +624,22 @@ async function handleUpdateCohort(body, user) {
     );
   }
 
-  const [currentGroup, targetGroup, affectedStudents] = await Promise.all([
-    CohortGroup.collection.findOne({ cohortType: currentCohortType }),
-    currentCohortType === rawNewType
-      ? CohortGroup.collection.findOne({ cohortType: currentCohortType })
-      : CohortGroup.collection.findOne({ cohortType: rawNewType }),
-    Cohort.collection.countDocuments({ cohortType: currentCohortType }),
-  ]);
+  const normCurrent = normalizeCohortType(currentCohortType);
+  const normNew = normalizeCohortType(rawNewType);
+
+  let currentGroup = await CohortGroup.findOne({
+    $or: [
+      { cohortType: currentCohortType },
+      ...(normCurrent ? [{ cohortType: normCurrent }] : []),
+    ],
+  });
+
+  const affectedStudents = await Cohort.countDocuments({
+    $or: [
+      { cohortType: currentCohortType },
+      ...(normCurrent ? [{ cohortType: normCurrent }] : []),
+    ],
+  });
 
   if (!currentGroup && affectedStudents === 0) {
     return NextResponse.json(
@@ -637,43 +648,52 @@ async function handleUpdateCohort(body, user) {
     );
   }
 
-  if (currentCohortType !== rawNewType) {
+  if (currentCohortType !== rawNewType && normCurrent !== normNew) {
+    const targetGroup = await CohortGroup.findOne({
+      $or: [
+        { cohortType: rawNewType },
+        ...(normNew ? [{ cohortType: normNew }] : []),
+      ],
+    });
+
     if (
       targetGroup &&
-      (!currentGroup || currentGroup._id.toString() !== targetGroup._id.toString())
+      (!currentGroup ||
+        currentGroup._id.toString() !== targetGroup._id.toString())
     ) {
       return NextResponse.json(
-        { status: false, message: `A cohort with the name "${rawNewType}" already exists.` },
+        {
+          status: false,
+          message: `A cohort with the name "${rawNewType}" already exists.`,
+        },
         { status: StatusCodes.CONFLICT },
       );
     }
 
-    await Cohort.collection.updateMany(
-      { cohortType: currentCohortType },
+    await Cohort.updateMany(
+      {
+        $or: [
+          { cohortType: currentCohortType },
+          ...(normCurrent ? [{ cohortType: normCurrent }] : []),
+        ],
+      },
       { $set: { cohortType: rawNewType } },
     );
   }
 
   if (currentGroup) {
-    const updatePayload = {
-      cohortType: rawNewType,
-      displayName: rawNewType,
-      updatedBy: staffName,
-      updatedAt: new Date(),
-    };
+    currentGroup.cohortType = rawNewType;
+    currentGroup.displayName = rawNewType;
     if (description !== undefined) {
-      updatePayload.description = description;
+      currentGroup.description = description;
     }
     if (active !== undefined) {
-      updatePayload.active = active;
+      currentGroup.active = active;
     }
-
-    await CohortGroup.collection.updateOne(
-      { _id: currentGroup._id },
-      { $set: updatePayload },
-    );
+    currentGroup.updatedBy = staffName;
+    await currentGroup.save();
   } else {
-    await CohortGroup.collection.insertOne({
+    currentGroup = await CohortGroup.create({
       cohortType: rawNewType,
       displayName: rawNewType,
       description: description || '',
@@ -683,8 +703,6 @@ async function handleUpdateCohort(body, user) {
       order: DEFAULT_COHORT_TYPES.includes(rawNewType)
         ? DEFAULT_COHORT_TYPES.indexOf(rawNewType) + 1
         : 100,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     });
   }
 
@@ -693,12 +711,13 @@ async function handleUpdateCohort(body, user) {
   return NextResponse.json(
     {
       status: true,
-      message: 'Cohort updated successfully.',
+      message: 'Cohort details updated successfully.',
       data: {
         previousCohortType: currentCohortType,
-        cohortType: rawNewType,
-        description,
-        active,
+        cohortType: currentGroup.cohortType,
+        displayName: currentGroup.displayName,
+        description: currentGroup.description,
+        active: currentGroup.active,
         affectedStudents,
         sheetsSync,
       },
