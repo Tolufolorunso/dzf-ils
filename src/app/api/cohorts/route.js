@@ -144,7 +144,7 @@ async function buildCohortPayload(selectedCohortType = 'all') {
   const selectedType =
     selectedCohortType === 'all'
       ? 'all'
-      : getCohortTypeValue(selectedCohortType) || 'all';
+      : normalizeCohortType(selectedCohortType) || getCohortTypeValue(selectedCohortType) || 'all';
 
   const [groups, activeStudents, totalStudents] = await Promise.all([
     CohortGroup.find({}).sort({ order: 1, cohortType: 1 }).lean(),
@@ -158,57 +158,50 @@ async function buildCohortPayload(selectedCohortType = 'all') {
   let totalAttendanceEntries = 0;
 
   activeStudents.forEach((student) => {
-    const cohortType = getCohortTypeValue(student.cohortType) || 'unassigned';
+    const rawCohort = getCohortTypeValue(student.cohortType);
+    const cohortType = normalizeCohortType(rawCohort) || rawCohort || 'cohort-1';
     cohortCountMap.set(cohortType, (cohortCountMap.get(cohortType) || 0) + 1);
     totalAttendanceEntries += Array.isArray(student.attendance)
       ? student.attendance.length
       : 0;
   });
 
-  const groupMap = new Map(
-    groups.map((group) => [getCohortTypeValue(group.cohortType), group]),
-  );
+  const groupMap = new Map();
 
-  cohortCountMap.forEach((studentCount, cohortType) => {
-    if (!groupMap.has(cohortType)) {
-      groupMap.set(cohortType, {
-        cohortType,
-        displayName: cohortType,
-        description: '',
-        order: 100,
-        active: true,
-      });
-    }
+  // Initialize ONLY official default cohort types (cohort-1 through cohort-7)
+  DEFAULT_COHORT_TYPES.forEach((cohortType, idx) => {
+    const existingGroup = groups.find(
+      (g) => normalizeCohortType(g?.cohortType) === cohortType || getCohortTypeValue(g?.cohortType) === cohortType
+    );
+
+    groupMap.set(cohortType, {
+      cohortType,
+      displayName: existingGroup?.displayName || cohortType,
+      description: existingGroup?.description || '',
+      order: existingGroup?.order || idx + 1,
+      active: existingGroup?.active !== false,
+    });
   });
 
-  const filters = Array.from(groupMap.values())
-    .filter((group) => getCohortTypeValue(group.cohortType))
-    .sort((left, right) => {
-      return (
-        Number(left.order || 100) - Number(right.order || 100) ||
-        getCohortTypeValue(left.cohortType).localeCompare(
-          getCohortTypeValue(right.cohortType),
-        )
-      );
-    })
-    .map((group) => {
-      const cohortType = getCohortTypeValue(group.cohortType);
-      return {
-        cohortType,
-        displayName: group.displayName || cohortType,
-        description: group.description || '',
-        active: group.active !== false,
-        studentCount: cohortCountMap.get(cohortType) || 0,
-        isDefault: isDefaultCohortType(cohortType),
-        normalizedSuggestion: normalizeCohortType(cohortType),
-      };
-    });
+  const filters = DEFAULT_COHORT_TYPES.map((cohortType) => {
+    const group = groupMap.get(cohortType);
+    return {
+      cohortType,
+      displayName: group.displayName || cohortType,
+      description: group.description || '',
+      active: group.active !== false,
+      studentCount: cohortCountMap.get(cohortType) || 0,
+      isDefault: true,
+      normalizedSuggestion: cohortType,
+    };
+  });
 
   const selectedStudents =
     selectedType === 'all'
       ? activeStudents
       : activeStudents.filter(
-          (student) => getCohortTypeValue(student.cohortType) === selectedType,
+          (student) =>
+            (normalizeCohortType(student.cohortType) || getCohortTypeValue(student.cohortType)) === selectedType,
         );
 
   const barcodes = selectedStudents.map((s) => s.barcode).filter(Boolean);
